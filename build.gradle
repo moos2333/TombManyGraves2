@@ -3,7 +3,7 @@ plugins {
     id 'com.gtnewhorizons.retrofuturagradle' version '2.0.3'
 }
 
-version = '1.12-4.2.1-fork'
+version = '1.12-4.2.2-fork'
 group = 'com.m4thg33k.tombmanygraves'
 
 base {
