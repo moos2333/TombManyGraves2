@@ -93,6 +93,13 @@ public class BetweenlandsInventory implements IGraveInventory {
                     if (graveItem.getItem() instanceof IEquippable) {
                         ((IEquippable) graveItem.getItem()).onEquip(graveItem, player, inv);
                     }
+                } else if (shouldForce) {
+                    ItemStack original = inv.getStackInSlot(i).copy();
+                    inv.setInventorySlotContents(i, graveItem);
+                    if (graveItem.getItem() instanceof IEquippable) {
+                        ((IEquippable) graveItem.getItem()).onEquip(graveItem, player, inv);
+                    }
+                    GraveInventoryHelper.dropItem(player, original);
                 } else {
                     GraveInventoryHelper.dropItem(player, graveItem);
                 }

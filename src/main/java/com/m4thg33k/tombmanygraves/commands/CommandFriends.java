@@ -1,6 +1,7 @@
 package com.m4thg33k.tombmanygraves.commands;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,14 +21,11 @@ import net.minecraft.util.text.TextComponentString;
 
 public class CommandFriends extends CommandBase {
 
-    public static List<String> parameters = new ArrayList<>();
+    public static List<String> parameters = new ArrayList<>(Arrays.asList("add", "remove", "list"));
 
     public CommandFriends()
     {
         super("tmg_friends", 0, true);
-        parameters.add("add");
-        parameters.add("remove");
-        parameters.add("list");
     }
 
     @Override
@@ -44,83 +42,86 @@ public class CommandFriends extends CommandBase {
         {
             return;
         }
-        else
+
+        EntityPlayer player = (EntityPlayer) sender;
+
+        if (args.length == 0)
         {
-            if (args.length == 0)
+            sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
+            return;
+        }
+
+        if (args.length == 1)
+        {
+            if (args[0].equals("list"))
+            {
+                FriendHandler.printFriendList(server, player);
+            }
+            else
             {
                 sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
             }
-            else if (args.length == 1)
-            {
-                if (args[0].equals("list"))
-                {
-                    FriendHandler.printFriendList(server, (EntityPlayer)sender);
-                }
-                else
-                {
-                    sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
-                }
-            }
-            else if (args.length == 2)
-            {
-                if (args[0].equals("list"))
-                {
-                    sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
-                }
-                else if (args[0].equals("add"))
-                {
-                    if (sender.getName().toLowerCase().equals(args[1].toLowerCase()))
-                    {
-                        sender.sendMessage(new TextComponentString("You cannot add yourself to your friends."));
-                    }
-                    else
-                    {
-                        GameProfile profile = server.getPlayerProfileCache().getGameProfileForUsername(args[1]);
-                        if (profile == null)
-                        {
-                            sender.sendMessage(new TextComponentString("That player doesn't seem to exist."));
-                            return;
-                        }
-                        UUID friend = profile.getId();
-
-                        if (FriendHandler.addFriendToList(((EntityPlayer) sender).getUniqueID(), friend))
-                        {
-                            sender.sendMessage(new TextComponentString("Added " + args[1] + " to your friends."));
-                        }
-                        else
-                        {
-                            sender.sendMessage(new TextComponentString("Unable to add " + args[1] + "."));
-                            sender.sendMessage(new TextComponentString("Maybe they were already there?"));
-                        }
-                    }
-                }
-                else if (args[0].equals("remove"))
-                {
-                    GameProfile profile = server.getPlayerProfileCache().getGameProfileForUsername(args[1]);
-                    if (profile == null)
-                    {
-                        sender.sendMessage(new TextComponentString("That player doesn't seem to exist."));
-                        return;
-                    }
-                    UUID friend = profile.getId();
-
-                    if (FriendHandler.removeFriend(((EntityPlayer) sender).getUniqueID(), friend))
-                    {
-                        sender.sendMessage(new TextComponentString("Removed " + args[1] + "."));
-                    }
-                    else
-                    {
-                        sender.sendMessage(new TextComponentString("Unable to remove " + args[1] + "."));
-                        sender.sendMessage(new TextComponentString("Maybe they never existed?"));
-                    }
-                }
-                else
-                {
-                    sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
-                }
-            }
+            return;
         }
 
+        if (args.length == 2)
+        {
+            if (args[0].equals("list"))
+            {
+                sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
+                return;
+            }
+
+            if (args[0].equals("add"))
+            {
+                if (sender.getName().equalsIgnoreCase(args[1]))
+                {
+                    sender.sendMessage(new TextComponentString("You cannot add yourself to your friends."));
+                    return;
+                }
+
+                GameProfile profile = server.getPlayerProfileCache().getGameProfileForUsername(args[1]);
+                if (profile == null)
+                {
+                    sender.sendMessage(new TextComponentString("That player doesn't seem to exist."));
+                    return;
+                }
+
+                if (FriendHandler.addFriendToList(player.getUniqueID(), profile.getId()))
+                {
+                    sender.sendMessage(new TextComponentString("Added " + args[1] + " to your friends."));
+                }
+                else
+                {
+                    sender.sendMessage(new TextComponentString("Unable to add " + args[1] + "."));
+                    sender.sendMessage(new TextComponentString("Maybe they were already there?"));
+                }
+                return;
+            }
+
+            if (args[0].equals("remove"))
+            {
+                GameProfile profile = server.getPlayerProfileCache().getGameProfileForUsername(args[1]);
+                if (profile == null)
+                {
+                    sender.sendMessage(new TextComponentString("That player doesn't seem to exist."));
+                    return;
+                }
+
+                if (FriendHandler.removeFriend(player.getUniqueID(), profile.getId()))
+                {
+                    sender.sendMessage(new TextComponentString("Removed " + args[1] + "."));
+                }
+                else
+                {
+                    sender.sendMessage(new TextComponentString("Unable to remove " + args[1] + "."));
+                    sender.sendMessage(new TextComponentString("Maybe they never existed?"));
+                }
+                return;
+            }
+
+            sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
+        }
     }
 
     @Override
@@ -133,7 +134,7 @@ public class CommandFriends extends CommandBase {
         }
         else if (args.length == 2)
         {
-            if  (args[0].equals("add"))
+            if (args[0].equals("add"))
             {
                 return getListOfStringMatchingLastWord(args, server.getOnlinePlayerNames());
             }

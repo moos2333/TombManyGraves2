@@ -34,7 +34,6 @@ public class ClientProxy extends CommonProxy{
         super.init(e);
 
         ModRenders.init();
-//        ItemRenderRegister.registerItemRenderers();
         ItemModelMesher mesher = Minecraft.getMinecraft().getRenderItem().getItemModelMesher();
 
         ItemRenderRegister.initClient(mesher);
@@ -54,7 +53,7 @@ public class ClientProxy extends CommonProxy{
     public void particleStream(Vector3f start, Vector3f end) {
         Vector3f diff = Vector3f.sub(start, end, null);
         float length = diff.length();
-        float scale = diff.length() < 5 ? 10 : diff.length();
+        float scale = length < 5 ? 10 : length;
 
         Vector3f motion = new Vector3f(diff.x/scale, diff.y/scale, diff.z/scale);
 

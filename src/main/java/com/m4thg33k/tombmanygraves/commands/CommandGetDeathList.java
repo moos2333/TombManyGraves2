@@ -64,9 +64,15 @@ public class CommandGetDeathList extends CommandBase {
             return;
         }
 
-        if (! ModConfigs.ALLOW_INVENTORY_SAVES)
+        if (!ModConfigs.ALLOW_INVENTORY_SAVES)
         {
             sender.sendMessage(new TextComponentString("This command has been disabled."));
+            return;
+        }
+
+        if (!(sender instanceof EntityPlayer))
+        {
+            sender.sendMessage(new TextComponentString("This command must be run by a player."));
             return;
         }
 
@@ -76,7 +82,8 @@ public class CommandGetDeathList extends CommandBase {
             return;
         }
 
-        boolean worked = DeathInventoryHandler.getDeathList((EntityPlayer)sender, (EntityPlayer)sender, args[0], args[1], false);
+        EntityPlayer player = (EntityPlayer) sender;
+        boolean worked = DeathInventoryHandler.getDeathList(player, player, args[0], args[1], false);
         if (!worked)
         {
             sender.sendMessage(new TextComponentString("Failed to retrieve list."));

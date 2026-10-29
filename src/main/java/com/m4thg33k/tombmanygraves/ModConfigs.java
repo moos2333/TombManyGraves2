@@ -223,12 +223,12 @@ public class ModConfigs {
                 "be able to replace FLOWING lava when created. (Defaults to true).").getBoolean();
 
         REPLACE_STILL_LAVA = config.get("GravePlacement", "replaceStillLava", true, "If true, graves will " +
-            "be able to replace STILL lava when created. (Defaults to true).").getBoolean();
+                "be able to replace STILL lava when created. (Defaults to true).").getBoolean();
 
         REPLACE_FLOWING_WATER = config.get("GravePlacement", "replaceFlowingWater", true, "If true, graves will " +
                 "be able to replace FLOWING water when created. (Defaults to true).").getBoolean();
 
-        REPLACE_STILL_WATER = config.get("GravePlacement", "replaceStillLava", true, "If true, graves will " +
+        REPLACE_STILL_WATER = config.get("GravePlacement", "replaceStillWater", true, "If true, graves will " +
                 "be able to replace STILL water when created. (Defaults to true).").getBoolean();
 
         REPLACE_PLANTS = config.get("GravePlacement", "replacePlants", true, "If true, graves will " +

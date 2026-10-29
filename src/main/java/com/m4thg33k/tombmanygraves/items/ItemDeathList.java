@@ -22,6 +22,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 
@@ -39,24 +40,29 @@ public class ItemDeathList extends Item{
 
     @Nonnull
     @Override
-    public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, @Nonnull  EnumHand hand) {
+    public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, @Nonnull EnumHand hand) {
         ItemStack held = playerIn.getHeldItem(hand);
         if (held.getItem() != this || EnumHand.OFF_HAND == hand)
         {
             return new ActionResult<>(EnumActionResult.PASS, held);
         }
+        BlockPos pos = playerIn.getPosition();
         playerIn.openGui(TombManyGraves.INSTANCE,
                 ModGuiHandler.DEATH_ITEMS_GUI,
                 worldIn,
-                playerIn.getPosition().getX(),
-                playerIn.getPosition().getY(),
-                playerIn.getPosition().getZ());
+                pos.getX(),
+                pos.getY(),
+                pos.getZ());
         return new ActionResult<>(EnumActionResult.SUCCESS, held);
     }
 
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag advanced) {
         super.addInformation(stack, world, tooltip, advanced);
+
+        if (world == null || !world.isRemote) {
+            return;
+        }
 
         boolean isShifted = Keyboard.isKeyDown(Keyboard.KEY_RSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
         boolean isControlled = Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_RCONTROL);
@@ -122,27 +128,40 @@ public class ItemDeathList extends Item{
 
     @Override
     public void onUpdate(ItemStack stack, World worldIn, Entity entityIn, int itemSlot, boolean isSelected) {
-        if (!worldIn.isRemote || !(entityIn instanceof EntityPlayer) ||
-                (((EntityPlayer) entityIn).getHeldItemMainhand() != stack && ((EntityPlayer) entityIn).getHeldItemOffhand() != stack))
+        if (!worldIn.isRemote || !(entityIn instanceof EntityPlayer))
         {
             return;
         }
 
-        if (ModConfigs.REQUIRE_SNEAK_FOR_PATH && !entityIn.isSneaking())
+        EntityPlayer player = (EntityPlayer) entityIn;
+        if (player.getHeldItemMainhand() != stack && player.getHeldItemOffhand() != stack)
         {
             return;
         }
 
-        Vector3f start = new Vector3f((float)entityIn.posX, (float)entityIn.posY + 2.5f, (float)entityIn.posZ);
+        if (ModConfigs.REQUIRE_SNEAK_FOR_PATH && !player.isSneaking())
+        {
+            return;
+        }
+
+        Vector3f start = new Vector3f((float) player.posX, (float) player.posY + 2.5f, (float) player.posZ);
         Vector3f direction = getDirectionalVector(stack, start);
-        if (direction == null || direction.length() == 0)
+        if (direction == null)
         {
             return;
         }
 
-        Vector3f normed = direction.normalise(null);
-        float length = Math.min(100, direction.length());
-        Vector3f end = Vector3f.add(new Vector3f(normed.x * length, normed.y * length, normed.z * length), start, null);
+        float len = direction.length();
+        if (len == 0)
+        {
+            return;
+        }
+
+        float scale = Math.min(100, len) / len;
+        Vector3f end = new Vector3f(
+                start.x + direction.x * scale,
+                start.y + direction.y * scale,
+                start.z + direction.z * scale);
 
         TombManyGraves.proxy.particleStream(start, end);
     }

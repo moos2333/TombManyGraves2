@@ -43,22 +43,25 @@ public class CommandPopGrave extends CommandBase {
         if (args.length != 3)
         {
             sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
+            return;
         }
 
         int[] coords = new int[3];
-        for (int i=0; i<3; i++)
+        for (int i = 0; i < 3; i++)
         {
-            try{
+            try
+            {
                 coords[i] = Integer.parseInt(args[i]);
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 sender.sendMessage(new TextComponentString("Invalid usage: " + getUsage(sender)));
                 return;
             }
         }
 
-        TileEntity tile = world.getTileEntity(new BlockPos(coords[0], coords[1], coords [2]));
-        if (tile == null || !(tile instanceof TileGrave))
+        TileEntity tile = world.getTileEntity(new BlockPos(coords[0], coords[1], coords[2]));
+        if (!(tile instanceof TileGrave))
         {
             sender.sendMessage(new TextComponentString("No grave exists at that location."));
         }
@@ -66,7 +69,6 @@ public class CommandPopGrave extends CommandBase {
         {
             ((TileGrave) tile).dropGraveContentsHere();
         }
-
     }
 
     @Override

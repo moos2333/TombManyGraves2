@@ -1,5 +1,7 @@
 package com.m4thg33k.tombmanygraves.network;
 
+import java.util.concurrent.Executor;
+
 import net.minecraft.client.network.NetHandlerPlayClient;
 import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraftforge.fml.common.FMLCommonHandler;
@@ -9,7 +11,14 @@ public abstract class BaseThreadsafePacket extends BasePacket {
 
     @Override
     public IMessage handleClient(NetHandlerPlayClient netHandler) {
-        FMLCommonHandler.instance().getWorldThread(netHandler).addScheduledTask(new Runnable() {
+        if (netHandler == null) {
+            return null;
+        }
+        Executor executor = FMLCommonHandler.instance().getWorldThread(netHandler);
+        if (executor == null) {
+            return null;
+        }
+        executor.addScheduledTask(new Runnable() {
             @Override
             public void run() {
                 handleClientSafe(netHandler);
@@ -20,7 +29,14 @@ public abstract class BaseThreadsafePacket extends BasePacket {
 
     @Override
     public IMessage handleServer(NetHandlerPlayServer netHandler) {
-        FMLCommonHandler.instance().getWorldThread(netHandler).addScheduledTask(new Runnable() {
+        if (netHandler == null) {
+            return null;
+        }
+        Executor executor = FMLCommonHandler.instance().getWorldThread(netHandler);
+        if (executor == null) {
+            return null;
+        }
+        executor.addScheduledTask(new Runnable() {
             @Override
             public void run() {
                 handleServerSafe(netHandler);

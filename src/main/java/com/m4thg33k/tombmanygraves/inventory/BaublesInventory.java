@@ -6,7 +6,7 @@ import com.m4thg33k.tombmanygraves.api.IGraveInventory;
 import com.m4thg33k.tombmanygraves.api.TempInventory;
 
 import baubles.api.BaublesApi;
-import baubles.api.cap.BaublesContainer;
+import baubles.api.cap.IBaublesItemHandler;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 
@@ -23,31 +23,58 @@ public class BaublesInventory implements IGraveInventory {
 
     @Override
     public TempInventory getItems(EntityPlayer player) {
-    	BaublesContainer container = (BaublesContainer) BaublesApi.getBaublesHandler(player);
-    	TempInventory inv = new TempInventory(container.getSlots());
-    	for(int i = 0; i < container.getSlots(); i++){
-    		inv.setInventorySlotContents(i, container.getStackInSlot(i));
-    	}
-    	return inv;
+        IBaublesItemHandler container = BaublesApi.getBaublesHandler(player);
+        if (container == null) {
+            return new TempInventory(0);
+        }
+        int slots = container.getSlots();
+        TempInventory inv = new TempInventory(slots);
+        for (int i = 0; i < slots; i++) {
+            ItemStack stack = container.getStackInSlot(i);
+            if (stack != null && !stack.isEmpty()) {
+                inv.setInventorySlotContents(i, stack.copy());
+            }
+        }
+        return inv;
     }
-    
+
     @Override
     public void insertInventory(EntityPlayer player, TempInventory inventory, boolean shouldForce) {
-            BaublesContainer container = (BaublesContainer)BaublesApi.getBaublesHandler(player);
-            for (int i=0; i < inventory.getSizeInventory(); i++){
-                ItemStack stack = inventory.getStackInSlot(i);
+        IBaublesItemHandler container = BaublesApi.getBaublesHandler(player);
+        if (container == null) {
+            dropAll(player, inventory, 0);
+            return;
+        }
 
-                if (container.getStackInSlot(i).isEmpty()){
-                    container.setStackInSlot(i, stack);
-                } else if(shouldForce){
-                    // Force the grave's item into the slot after dropping the original
-                    GraveInventoryHelper.dropItem(player, container.getStackInSlot(i).copy());
-                    container.setStackInSlot(i, stack);
-                } else {
-                    // Leave the original in place, drop the grave item
-                    GraveInventoryHelper.dropItem(player, stack);
-                }
+        int maxSlots = Math.min(inventory.getSizeInventory(), container.getSlots());
+
+        for (int i = 0; i < maxSlots; i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
+            if (stack.isEmpty()) {
+                continue;
             }
+            ItemStack current = container.getStackInSlot(i);
 
+            if (current == null || current.isEmpty()) {
+                container.setStackInSlot(i, stack);
+            } else if (shouldForce) {
+                ItemStack original = current.copy();
+                container.setStackInSlot(i, stack);
+                GraveInventoryHelper.dropItem(player, original);
+            } else {
+                GraveInventoryHelper.dropItem(player, stack);
+            }
+        }
+
+        dropAll(player, inventory, maxSlots);
+    }
+
+    private static void dropAll(EntityPlayer player, TempInventory inventory, int fromIndex) {
+        for (int i = fromIndex; i < inventory.getSizeInventory(); i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                GraveInventoryHelper.dropItem(player, stack);
+            }
+        }
     }
 }

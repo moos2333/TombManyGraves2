@@ -26,8 +26,8 @@ public class CommonProxy {
 
     public void preinit(FMLPreInitializationEvent e)
     {
-        FriendHandler.importFriendsList();
         ModConfigs.preInit(e);
+        FriendHandler.importFriendsList();
         TMGNetwork.setup();
         ModItems.createItems();
         ModBlocks.preInit();
@@ -49,7 +49,6 @@ public class CommonProxy {
 
     public List<String> probeForFiles(BlockPos pos)
     {
-//        LogHelper.info("Probing for files in Common!");
         return DeathInventoryHandler.getSavedInventories();
     }
 
