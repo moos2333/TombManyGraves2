@@ -42,18 +42,13 @@ repositories {
         url = 'https://cursemaven.com'
         content { includeGroup 'curse.maven' }
     }
-    maven {
-        name = 'Modrinth'
-        url = 'https://api.modrinth.com/maven'
-        content { includeGroup 'maven.modrinth' }
-    }
     maven { url = 'https://jitpack.io' }
     mavenCentral()
 }
 
 dependencies {
-    implementation rfg.deobf('mezz.jei:jei_1.12.2:4.16.1.301')
-    implementation rfg.deobf('com.github.azanor:Baubles:7035b13')
+    compileOnly rfg.deobf('mezz.jei:jei_1.12.2:4.16.1.301')
+    compileOnly rfg.deobf('com.github.azanor:Baubles:7035b13')
 
     compileOnly rfg.deobf('curse.maven:aether-255308:6316434')
     compileOnly rfg.deobf('curse.maven:angry-pixel-the-betweenlands-mod-243363:4479688')
