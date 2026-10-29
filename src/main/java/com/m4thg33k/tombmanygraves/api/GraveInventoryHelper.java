@@ -10,11 +10,14 @@ import net.minecraft.world.World;
 public class GraveInventoryHelper {
 
 	public static TempInventory storeInventory(IInventory inventory) {
-		TempInventory copy = new TempInventory(inventory.getSizeInventory());
+		int size = inventory.getSizeInventory();
+		TempInventory copy = new TempInventory(size);
 
-		for (int i = 0; i < inventory.getSizeInventory(); i++) {
+		for (int i = 0; i < size; i++) {
 			ItemStack stack = inventory.getStackInSlot(i);
-			copy.setInventorySlotContents(i, stack.isEmpty() ? ItemStack.EMPTY : stack.copy());
+			if (!stack.isEmpty()) {
+				copy.setInventorySlotContents(i, stack.copy());
+			}
 		}
 		return copy;
 	}

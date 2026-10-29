@@ -54,41 +54,34 @@ public class TileGrave extends TileEntity {
 
     private InventoryHolder savedInventory = new InventoryHolder();
 
-    public TileGrave()
-    {
+    public TileGrave() {
 
     }
 
-    private void setPlayerName(@Nonnull String name)
-    {
+    private void setPlayerName(@Nonnull String name) {
         playerName = name;
         skull = null;
     }
 
-    public String getPlayerName()
-    {
+    public String getPlayerName() {
         return playerName;
     }
 
-    private void setPlayerID(UUID id)
-    {
+    private void setPlayerID(UUID id) {
         this.playerID = id;
     }
 
-    public void setPlayer(EntityPlayer player)
-    {
+    public void setPlayer(EntityPlayer player) {
         this.setPlayerName(player.getName());
         this.setPlayerID(player.getUniqueID());
         this.markDirty();
         notifyUpdate();
     }
 
-    public void getPlayerData(@Nonnull EntityPlayer player)
-    {
+    public void getPlayerData(@Nonnull EntityPlayer player) {
         angle = (int) player.rotationYawHead;
 
-        if (world.isRemote)
-        {
+        if (world.isRemote) {
             return;
         }
 
@@ -99,74 +92,62 @@ public class TileGrave extends TileEntity {
         notifyUpdate();
     }
 
-    public InventoryHolder getSavedInventory()
-    {
+    public InventoryHolder getSavedInventory() {
         return savedInventory;
     }
 
-    public void setSavedInventory(InventoryHolder holder)
-    {
+    public void setSavedInventory(InventoryHolder holder) {
         this.savedInventory = holder;
         this.timestamp = holder.getTimestamp();
+        this.markDirty();
     }
 
-    private void setSkull()
-    {
+    private void setSkull() {
         skull = new ItemStack(Items.SKULL, 1, 3);
         NBTTagCompound compound = new NBTTagCompound();
         compound.setTag(SKULL_TAG, new NBTTagString(playerName));
         skull.setTagCompound(compound);
     }
 
-    public void onRightClick(@Nonnull EntityPlayer player)
-    {
-        if (this.hasAccess(player))
-        {
+    public void onRightClick(@Nonnull EntityPlayer player) {
+        if (this.hasAccess(player)) {
             this.toggleGravePriority();
             ChatHelper.sayMessage(player,
                     GIVE_ITEMS_IN_GRAVE_PRIORITY ?
                             "Grave items will be forced into their original slots" :
                             "Items in your inventory will not move.");
-        }
-        else
-        {
+        } else {
             ChatHelper.sayMessage(player, "You do not have permission to interact with this grave.");
         }
     }
 
-    public boolean isSamePlayer(EntityPlayer player)
-    {
+    public boolean isSamePlayer(EntityPlayer player) {
         return ModConfigs.ALLOW_GRAVE_ROBBING || player.getUniqueID().equals(playerID);
     }
 
-    private void writeSyncFields(NBTTagCompound compound)
-    {
+    private void writeSyncFields(NBTTagCompound compound) {
         compound.setString(PLAYER_NAME, playerName);
         compound.setInteger(ANGLE_OF_DEATH, angle);
         compound.setBoolean(LOCKED, locked);
-        if (playerID != null)
-        {
+        if (playerID != null) {
             compound.setUniqueId(PLAYER_UUID, playerID);
         }
         compound.setBoolean(GRAVE_PRIORITY, GIVE_ITEMS_IN_GRAVE_PRIORITY);
-        if (camoState != null)
-        {
+        if (camoState != null) {
             compound.setString(TAG_CAMO, Block.REGISTRY.getNameForObject(camoState.getBlock()).toString());
             compound.setInteger(TAG_CAMO_META, camoState.getBlock().getMetaFromState(camoState));
         }
         compound.setString(InventoryHolder.TIMESTAMP, timestamp);
     }
 
-    private void readSyncFields(NBTTagCompound compound)
-    {
+    private void readSyncFields(NBTTagCompound compound) {
         setPlayerName(compound.getString(PLAYER_NAME));
         angle = compound.getInteger(ANGLE_OF_DEATH);
         locked = compound.getBoolean(LOCKED);
         playerID = compound.getUniqueId(PLAYER_UUID);
         GIVE_ITEMS_IN_GRAVE_PRIORITY = compound.getBoolean(GRAVE_PRIORITY);
         Block b = Block.getBlockFromName(compound.getString(TAG_CAMO));
-        if (b != null)
-        {
+        if (b != null) {
             camoState = b.getStateFromMeta(compound.getInteger(TAG_CAMO_META));
         }
         timestamp = compound.getString(InventoryHolder.TIMESTAMP);
@@ -194,37 +175,29 @@ public class TileGrave extends TileEntity {
         return compound;
     }
 
-    private void toggleGravePriority()
-    {
+    private void toggleGravePriority() {
         GIVE_ITEMS_IN_GRAVE_PRIORITY = !GIVE_ITEMS_IN_GRAVE_PRIORITY;
         markDirty();
         notifyUpdate();
     }
 
-    public void onCollision(EntityPlayer player)
-    {
-        if (world.isRemote || locked || !(hasAccess(player)))
-        {
+    public void onCollision(EntityPlayer player) {
+        if (world.isRemote || locked || !(hasAccess(player))) {
             return;
         }
 
         removeCorrespondingDeathList(player);
 
-        if (GIVE_ITEMS_IN_GRAVE_PRIORITY)
-        {
+        if (GIVE_ITEMS_IN_GRAVE_PRIORITY) {
             savedInventory.forceInventory(player);
-        }
-        else
-        {
+        } else {
             savedInventory.insertInventory(player);
         }
         world.setBlockToAir(pos);
     }
 
-    public void dropGraveContentsAt(World worldIn, BlockPos posIn)
-    {
-        if (worldIn.isRemote)
-        {
+    public void dropGraveContentsAt(World worldIn, BlockPos posIn) {
+        if (worldIn.isRemote) {
             return;
         }
 
@@ -232,29 +205,22 @@ public class TileGrave extends TileEntity {
         world.setBlockToAir(pos);
     }
 
-    public void dropGraveContentsHere()
-    {
+    public void dropGraveContentsHere() {
         dropGraveContentsAt(world, pos);
     }
 
-    private void removeCorrespondingDeathList(EntityPlayer player)
-    {
-        for (int i = 0; i < player.inventory.getSizeInventory(); i++)
-        {
+    private void removeCorrespondingDeathList(EntityPlayer player) {
+        for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
             ItemStack stack = player.inventory.getStackInSlot(i);
-            if (!stack.isEmpty() && stack.getItem() == ModItems.itemDeathList)
-            {
+            if (!stack.isEmpty() && stack.getItem() == ModItems.itemDeathList) {
                 NBTTagCompound tagCompound = stack.hasTagCompound() ? stack.getTagCompound() : new NBTTagCompound();
-                if (tagCompound.hasKey(InventoryHolder.TAG_NAME))
-                {
+                if (tagCompound.hasKey(InventoryHolder.TAG_NAME)) {
                     NBTTagCompound tag = tagCompound.getCompoundTag(InventoryHolder.TAG_NAME);
-                    if (!tag.hasKey(InventoryHolder.TIMESTAMP))
-                    {
+                    if (!tag.hasKey(InventoryHolder.TIMESTAMP)) {
                         continue;
                     }
                     String time = tag.getString(InventoryHolder.TIMESTAMP);
-                    if (time.equals(this.timestamp))
-                    {
+                    if (time.equals(this.timestamp)) {
                         player.inventory.setInventorySlotContents(i, ItemStack.EMPTY);
                     }
                 }
@@ -288,58 +254,46 @@ public class TileGrave extends TileEntity {
         readSyncFields(tag);
     }
 
-    public int getAngle()
-    {
+    public int getAngle() {
         return angle;
     }
 
-    public boolean isLocked()
-    {
+    public boolean isLocked() {
         return locked;
     }
 
-    public void toggleLock(EntityPlayer player)
-    {
-        if (world.isRemote)
-        {
+    public void toggleLock(EntityPlayer player) {
+        if (world.isRemote) {
             return;
         }
 
         if (hasAccess(player)) {
             locked = !locked;
-            if (ModConfigs.ALLOW_LOCKING_MESSAGES)
-            {
+            if (ModConfigs.ALLOW_LOCKING_MESSAGES) {
                 ChatHelper.sayMessage(player, "The grave is now " + (locked ? "" : "un") + "locked!");
             }
 
             markDirty();
             notifyUpdate();
-        }
-        else
-        {
+        } else {
             ChatHelper.sayMessage(player, "You do not have permission to modify this grave.");
         }
     }
 
-    public boolean isFriend(EntityPlayer player)
-    {
-        return FriendHandler.hasAsFriend(playerID, player.getUniqueID());
+    public boolean isFriend(EntityPlayer player) {
+        return playerID != null && FriendHandler.hasAsFriend(playerID, player.getUniqueID());
     }
 
-    public boolean hasAccess(EntityPlayer player)
-    {
+    public boolean hasAccess(EntityPlayer player) {
         return isSamePlayer(player) || isFriend(player);
     }
 
-    public boolean getShouldRenderGround()
-    {
+    public boolean getShouldRenderGround() {
         return shouldRenderGround;
     }
 
-    public ItemStack getSkull()
-    {
-        if (skull == null)
-        {
+    public ItemStack getSkull() {
+        if (skull == null) {
             setSkull();
         }
         return skull;
@@ -348,43 +302,37 @@ public class TileGrave extends TileEntity {
     @ParametersAreNonnullByDefault
     @Override
     public boolean shouldRefresh(World world, BlockPos pos, IBlockState oldState, IBlockState newSate) {
-        return true;
+        return oldState.getBlock() != newSate.getBlock();
     }
 
-    public void setCamoState(IBlockState state)
-    {
+    public void setCamoState(IBlockState state) {
         camoState = state;
         setShouldGroundRender();
+        this.markDirty();
     }
 
-    public IBlockState getCamoState()
-    {
+    public IBlockState getCamoState() {
         return camoState;
     }
 
-    public void setShouldGroundRender()
-    {
+    public void setShouldGroundRender() {
         shouldRenderGround = !(camoState == null || camoState == ModBlocks.blockGrave.getDefaultState());
     }
 
-    public boolean areGraveItemsForced()
-    {
+    public boolean areGraveItemsForced() {
         return GIVE_ITEMS_IN_GRAVE_PRIORITY;
     }
 
-    public void setTimestamp(String stamp)
-    {
+    public void setTimestamp(String stamp) {
         this.timestamp = stamp;
         markDirty();
     }
 
-    public String getTimestamp()
-    {
+    public String getTimestamp() {
         return timestamp;
     }
 
-    private void notifyUpdate()
-    {
+    private void notifyUpdate() {
         IBlockState state = world.getBlockState(pos);
         world.markAndNotifyBlock(pos, null, state, state, 2);
     }

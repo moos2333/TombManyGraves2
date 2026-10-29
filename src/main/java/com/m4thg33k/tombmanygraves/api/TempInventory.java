@@ -57,7 +57,7 @@ public class TempInventory extends InventoryBasic {
     }
 
     public List<ItemStack> getListOfNonEmptyItemStacks() {
-        List<ItemStack> ret = new ArrayList<>();
+        List<ItemStack> ret = new ArrayList<>(this.getSizeInventory());
         for (int i = 0; i < this.getSizeInventory(); i++) {
             ItemStack inSlot = this.getStackInSlot(i);
             if (!inSlot.isEmpty()) {

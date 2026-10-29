@@ -33,8 +33,9 @@ import net.minecraftforge.common.property.IUnlistedProperty;
 @SuppressWarnings("deprecation")
 public class BlockGrave extends BaseBlock {
 
-    public BlockGrave()
-    {
+    private static final AxisAlignedBB GRAVE_BOX = new AxisAlignedBB(0.25D, 0.25D, 0.25D, 0.75D, 0.75D, 0.75D);
+
+    public BlockGrave() {
         super(Names.GRAVE_BLOCK, Material.WOOD, 100.0f, 100.0f);
 
         this.setBlockUnbreakable();
@@ -48,7 +49,7 @@ public class BlockGrave extends BaseBlock {
     }
 
     @Override
-    public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state, EntityPlayer playerIn, EnumHand hand, EnumFacing heldItem, float side, float hitX, float hitY) {
+    public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state, EntityPlayer playerIn, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ) {
         if (!worldIn.isRemote) {
             TileEntity tile = worldIn.getTileEntity(pos);
             if (tile instanceof TileGrave) {
@@ -94,9 +95,8 @@ public class BlockGrave extends BaseBlock {
                 .withProperty(TMGStateProps.HELD_POS, pos);
 
         TileEntity tile = world.getTileEntity(pos);
-        if (tile instanceof TileGrave)
-        {
-            state = ((IExtendedBlockState)state).withProperty(TMGStateProps.HELD_STATE,
+        if (tile instanceof TileGrave) {
+            state = ((IExtendedBlockState) state).withProperty(TMGStateProps.HELD_STATE,
                     ((TileGrave) tile).getCamoState());
         }
 
@@ -114,21 +114,23 @@ public class BlockGrave extends BaseBlock {
         return new TileGrave();
     }
 
-
     @ParametersAreNonnullByDefault
     @Override
-    public void addCollisionBoxToList(IBlockState state,World worldIn, BlockPos pos, AxisAlignedBB entityBox,
-                                      List<AxisAlignedBB> collidingBoxes,@Nullable Entity entityIn, boolean bool) {
-        TileEntity tile = worldIn.getTileEntity(pos);
-        if (tile instanceof TileGrave)
-        {
-            if (entityIn instanceof EntityPlayer &&
-                    !(((TileGrave) tile).isLocked()) &&
-                    ((TileGrave) tile).hasAccess((EntityPlayer)entityIn))
-            {
-                super.addCollisionBoxToList(state, worldIn, pos, entityBox, collidingBoxes, entityIn, bool);
-            }
+    public void addCollisionBoxToList(IBlockState state, World worldIn, BlockPos pos, AxisAlignedBB entityBox,
+                                      List<AxisAlignedBB> collidingBoxes, @Nullable Entity entityIn, boolean isActualState) {
+        if (!(entityIn instanceof EntityPlayer)) {
+            return;
         }
+        EntityPlayer player = (EntityPlayer) entityIn;
+        TileEntity tile = worldIn.getTileEntity(pos);
+        if (!(tile instanceof TileGrave)) {
+            return;
+        }
+        TileGrave grave = (TileGrave) tile;
+        if (grave.isLocked() || !grave.hasAccess(player)) {
+            return;
+        }
+        super.addCollisionBoxToList(state, worldIn, pos, entityBox, collidingBoxes, entityIn, isActualState);
     }
 
     @Override
@@ -160,16 +162,12 @@ public class BlockGrave extends BaseBlock {
         if (!player.isEntityAlive()) {
             return;
         }
+        if (ModConfigs.REQUIRE_SNEAKING && !player.isSneaking()) {
+            return;
+        }
         TileEntity tile = worldIn.getTileEntity(pos);
         if (tile instanceof TileGrave) {
-            TileGrave grave = (TileGrave) tile;
-            if (ModConfigs.REQUIRE_SNEAKING) {
-                if (player.isSneaking()) {
-                    grave.onCollision(player);
-                }
-            } else {
-                grave.onCollision(player);
-            }
+            ((TileGrave) tile).onCollision(player);
         }
     }
 
@@ -186,7 +184,7 @@ public class BlockGrave extends BaseBlock {
     @Nonnull
     @Override
     public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        return new AxisAlignedBB(0.25f, 0.25f, 0.25f, 0.75f, 0.75f, 0.75f);
+        return GRAVE_BOX;
     }
 
     @Override
@@ -197,7 +195,6 @@ public class BlockGrave extends BaseBlock {
     @ParametersAreNonnullByDefault
     @Override
     public void onBlockExploded(World world, BlockPos pos, Explosion explosion) {
-
     }
 
     @Override

@@ -43,6 +43,10 @@ public class CommonEvents {
 	public void onPlayerDeath(LivingDeathEvent e) {
 		if (e.isCanceled() || e.getEntityLiving().getEntityWorld().isRemote || !(e.getEntityLiving() instanceof EntityPlayer)) return;
 		EntityPlayer player = (EntityPlayer) e.getEntityLiving();
+		if (player.world.getGameRules().getBoolean("keepInventory")) {
+			invs.remove(player.getUniqueID());
+			return;
+		}
 		invs.remove(player.getUniqueID());
 		InventoryHolder inventoryHolder = new InventoryHolder();
 		inventoryHolder.grabPlayerData(player);
@@ -78,11 +82,9 @@ public class CommonEvents {
 			ItemStack newList = DeathInventoryHandler.getDeathListFromFile(player.getName(), "latest");
 			if (newList != null) {
 				InventoryPlayer inv = player.inventory;
-				for (int i = 0; i < inv.mainInventory.size(); i++) {
-					if (inv.mainInventory.get(i).isEmpty()) {
-						inv.mainInventory.set(i, newList.copy());
-						break;
-					}
+				int empty = inv.getFirstEmptyStack();
+				if (empty >= 0) {
+					inv.mainInventory.set(empty, newList.copy());
 				}
 			}
 		}
@@ -183,8 +185,8 @@ public class CommonEvents {
 	}
 
 	private BlockPos checkLevel(World world, BlockPos pos, int radius, boolean ignoreFluidConfigs) {
-		if (radius == 0 && isValidLocation(world, pos, ignoreFluidConfigs)) {
-			return pos;
+		if (radius == 0) {
+			return isValidLocation(world, pos, ignoreFluidConfigs) ? pos : INVALID_POS;
 		}
 
 		for (int i = -radius; i <= radius; i++) {
@@ -254,11 +256,9 @@ public class CommonEvents {
 				ItemStack item = originalInv.mainInventory.get(i);
 
 				if (!item.isEmpty() && item.getItem() == ModItems.itemDeathList) {
-					for (int j = 0; j < newInv.mainInventory.size(); j++) {
-						if (newInv.mainInventory.get(j).isEmpty()) {
-							newInv.mainInventory.set(j, item.copy());
-							break;
-						}
+					int empty = newInv.getFirstEmptyStack();
+					if (empty >= 0) {
+						newInv.mainInventory.set(empty, item.copy());
 					}
 				}
 			}
