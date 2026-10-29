@@ -324,11 +324,14 @@ public class InventoryHolder {
         if (raw.hasKey(TAG_NAME) || !raw.hasKey(TAG_COMPRESSED)) {
             return raw;
         }
-        InventoryHolder holder = new InventoryHolder();
-        holder.readFromNBT(raw);
+        NBTTagCompound restored = decompressOrNull(raw.getByteArray(TAG_COMPRESSED));
+        if (restored == null) {
+            LogHelper.error("Failed to decompress saved inventory; data may be corrupted.");
+            return null;
+        }
         NBTTagCompound flat = new NBTTagCompound();
-        flat.setTag(TAG_NAME, holder.compound);
-        flat.setBoolean(EMPTY, holder.isEmpty);
+        flat.setTag(TAG_NAME, restored);
+        flat.setBoolean(EMPTY, raw.getBoolean(EMPTY));
         return flat;
     }
 }
