@@ -150,7 +150,7 @@ public class DeathInventoryHandler {
 
     public static ItemStack getDeathListFromFile(String playerName, String timestamp) {
         String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
-        NBTTagCompound allNBT = readNBT(filename);
+        NBTTagCompound allNBT = InventoryHolder.toUncompressedForm(readNBT(filename));
         if (allNBT != null && !allNBT.isEmpty()) {
             ItemStack theList = new ItemStack(ModItems.itemDeathList, 1);
             theList.setTagCompound(allNBT);
@@ -162,7 +162,7 @@ public class DeathInventoryHandler {
     public static boolean getDeathList(EntityPlayer playerOld, EntityPlayer playerNew, String playerName, String timestamp, boolean didDie) {
         String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
 
-        NBTTagCompound allNBT = readNBT(filename);
+        NBTTagCompound allNBT = InventoryHolder.toUncompressedForm(readNBT(filename));
         if (allNBT == null) {
             return false;
         }
@@ -196,7 +196,7 @@ public class DeathInventoryHandler {
 
     public static NBTTagCompound getSavedInventoryAsNBT(String playerName, String timestamp) {
         String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
-        return readNBT(filename);
+        return InventoryHolder.toUncompressedForm(readNBT(filename));
     }
 
     private static NBTTagCompound readNBT(String filename) {

@@ -316,4 +316,19 @@ public class InventoryHolder {
     public Map<String, Tuple<String, List<String>>> getItemStackStringsForGui() {
         return GraveInventoryManager.getInstance().createItemListForGui(compound);
     }
+
+    public static NBTTagCompound toUncompressedForm(NBTTagCompound raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw.hasKey(TAG_NAME) || !raw.hasKey(TAG_COMPRESSED)) {
+            return raw;
+        }
+        InventoryHolder holder = new InventoryHolder();
+        holder.readFromNBT(raw);
+        NBTTagCompound flat = new NBTTagCompound();
+        flat.setTag(TAG_NAME, holder.compound);
+        flat.setBoolean(EMPTY, holder.isEmpty);
+        return flat;
+    }
 }
