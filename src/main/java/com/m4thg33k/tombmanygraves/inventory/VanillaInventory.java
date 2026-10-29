@@ -6,6 +6,7 @@ import com.m4thg33k.tombmanygraves.api.IGraveInventory;
 import com.m4thg33k.tombmanygraves.api.TempInventory;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
@@ -13,6 +14,13 @@ import net.minecraft.item.ItemStack;
 public class VanillaInventory implements IGraveInventory {
 
 	public static final String UNIQUE_IDENTIFIER = "vanilla";
+
+	private static final int MAIN_INV_SIZE = 36;
+	private static final int ARMOR_SLOT_BOOTS = 36;
+	private static final int ARMOR_SLOT_LEGGINGS = 37;
+	private static final int ARMOR_SLOT_CHESTPLATE = 38;
+	private static final int ARMOR_SLOT_HELMET = 39;
+	private static final int OFFHAND_SLOT = 40;
 
 	@Override
 	public boolean pregrabLogic(EntityPlayer player) {
@@ -41,7 +49,7 @@ public class VanillaInventory implements IGraveInventory {
 				currentInventory.setInventorySlotContents(i, graveItem);
 			} else if (shouldForce) {
 				if (isProtectedSlotItem(currentStack)) {
-					int emptySlot = findEmptySlotExcluding(currentInventory, i);
+					int emptySlot = findSlotFor(currentInventory, i, currentStack);
 					if (emptySlot >= 0) {
 						currentInventory.setInventorySlotContents(emptySlot, currentStack);
 						currentInventory.setInventorySlotContents(i, graveItem);
@@ -70,17 +78,47 @@ public class VanillaInventory implements IGraveInventory {
 		return !stack.isEmpty() && !stack.isStackable();
 	}
 
-	private static int findEmptySlotExcluding(IInventory inventory, int excluded) {
+	private static int findSlotFor(IInventory inventory, int excluded, ItemStack toPlace) {
 		int size = inventory.getSizeInventory();
 		for (int j = 0; j < size; j++) {
 			if (j == excluded) {
 				continue;
 			}
 			ItemStack stack = inventory.getStackInSlot(j);
-			if (stack == null || stack.isEmpty()) {
+			if (stack != null && !stack.isEmpty()) {
+				continue;
+			}
+			if (j < MAIN_INV_SIZE || j == OFFHAND_SLOT) {
+				return j;
+			}
+			if (canPlaceInArmorSlot(toPlace, j)) {
 				return j;
 			}
 		}
 		return -1;
+	}
+
+	private static boolean canPlaceInArmorSlot(ItemStack stack, int slotIndex) {
+		EntityEquipmentSlot required = armorSlotFor(slotIndex);
+		if (required == null) {
+			return false;
+		}
+		EntityEquipmentSlot itemSlot = stack.getItem().getEquipmentSlot(stack);
+		return itemSlot != null && itemSlot == required;
+	}
+
+	private static EntityEquipmentSlot armorSlotFor(int slotIndex) {
+		switch (slotIndex) {
+			case ARMOR_SLOT_BOOTS:
+				return EntityEquipmentSlot.FEET;
+			case ARMOR_SLOT_LEGGINGS:
+				return EntityEquipmentSlot.LEGS;
+			case ARMOR_SLOT_CHESTPLATE:
+				return EntityEquipmentSlot.CHEST;
+			case ARMOR_SLOT_HELMET:
+				return EntityEquipmentSlot.HEAD;
+			default:
+				return null;
+		}
 	}
 }
