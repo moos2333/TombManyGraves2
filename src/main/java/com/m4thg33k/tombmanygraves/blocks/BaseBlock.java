@@ -8,7 +8,7 @@ public class BaseBlock extends Block {
     public BaseBlock(String unlocalizedName, Material material, float hardness, float resistance)
     {
         super(material);
-        this.setUnlocalizedName(unlocalizedName);
+        this.setTranslationKey(unlocalizedName);
         this.setHardness(hardness);
         this.setResistance(resistance);
     }

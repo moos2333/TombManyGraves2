@@ -21,55 +21,45 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 public class RenderEvents {
 
-    public Minecraft mc;
-
     private static final int FORCE = ModConfigs.NAME_FORCE;
     private static final int YIELD = ModConfigs.NAME_YIELD;
 
-    public RenderEvents()
-    {
+    private final Minecraft mc;
+    private final Tessellator tessellator = Tessellator.getInstance();
+
+    public RenderEvents() {
         this.mc = Minecraft.getMinecraft();
     }
 
     @SubscribeEvent
-    public void onBlockHighlight(DrawBlockHighlightEvent event)
-    {
-        if (! ModConfigs.DISPLAY_GRAVE_NAME)
-        {
-            return;
-        }
+    public void onBlockHighlight(DrawBlockHighlightEvent event) {
+        if (!ModConfigs.DISPLAY_GRAVE_NAME) return;
 
         RayTraceResult trace = event.getTarget();
-        if (trace != null && trace.typeOfHit == RayTraceResult.Type.BLOCK)
-        {
-            World world = mc.world;
-            IBlockState state = world.getBlockState(trace.getBlockPos());
+        if (trace == null || trace.typeOfHit != RayTraceResult.Type.BLOCK) return;
 
-            if (state.getBlock() == ModBlocks.blockGrave)
-            {
-                TileEntity tile = world.getTileEntity(trace.getBlockPos());
-                if (tile != null && tile instanceof TileGrave)
-                {
-                    String name = ((TileGrave) tile).getPlayerName();
-                    boolean giveGraveItemsPriority = ((TileGrave) tile).areGraveItemsForced();
-                    this.renderPlayerName(trace.getBlockPos(), event.getPartialTicks(), name, giveGraveItemsPriority);
-                }
-            }
+        BlockPos pos = trace.getBlockPos();
+        World world = mc.world;
+        IBlockState state = world.getBlockState(pos);
+
+        if (state.getBlock() != ModBlocks.blockGrave) return;
+
+        TileEntity tile = world.getTileEntity(pos);
+        if (tile instanceof TileGrave) {
+            TileGrave grave = (TileGrave) tile;
+            String name = grave.getPlayerName();
+            boolean giveGraveItemsPriority = grave.areGraveItemsForced();
+            renderPlayerName(pos, event.getPartialTicks(), name, giveGraveItemsPriority);
         }
     }
 
-    private void renderPlayerName(BlockPos pos, float partialTicks, String name, boolean giveGravePriority)
-    {
-        if (name.length() > 0)
-        {
-            GlStateManager.alphaFunc(516, 0.1f);
-            renderPlayerName(name, this.mc.player, pos, partialTicks, giveGravePriority);
-        }
+    private void renderPlayerName(BlockPos pos, float partialTicks, String name, boolean giveGravePriority) {
+        if (name.isEmpty()) return;
+        GlStateManager.alphaFunc(516, 0.1f);
+        renderPlayerName(name, this.mc.player, pos, partialTicks, giveGravePriority);
     }
 
-    private void renderPlayerName(String name, EntityPlayer player, BlockPos pos,
-                                  float partialTicks, boolean giveGravePriority)
-    {
+    private void renderPlayerName(String name, EntityPlayer player, BlockPos pos, float partialTicks, boolean giveGravePriority) {
         double x = pos.getX();
         double y = pos.getY();
         double z = pos.getZ();
@@ -81,32 +71,22 @@ public class RenderEvents {
         float angleH = player.rotationYawHead;
         float angleV = 0f;
 
-
-        this.renderLabel(name, x - dx, y -dy, z - dz, angleH, angleV, giveGravePriority);
-        this.renderLabel(giveGravePriority ? "force" : "yield", x - dx, y - dy - 0.25, z - dz, angleH, angleV, giveGravePriority);
-//        if (giveGravePriority) {
-//            this.renderLabel("force", x - dx, y - dy - 0.25, z - dz, angleH, angleV, giveGravePriority);
-//        }
-//        else {
-//            this.renderLabel("yield", x - dx, y - dy - 0.25, z - dz, angleH, angleV, giveGravePriority);
-//        }
-        if (ModConfigs.GRAVE_POS_ENABLED)
-        {
-            this.renderLabel(posToString(pos), x - dx, y - dy - 0.5, z - dz, angleH, angleV, giveGravePriority);
+        renderLabel(name, x - dx, y - dy, z - dz, angleH, angleV, giveGravePriority);
+        renderLabel(giveGravePriority ? "force" : "yield", x - dx, y - dy - 0.25, z - dz, angleH, angleV, giveGravePriority);
+        if (ModConfigs.GRAVE_POS_ENABLED) {
+            renderLabel(posToString(pos), x - dx, y - dy - 0.5, z - dz, angleH, angleV, giveGravePriority);
         }
     }
 
-    private String posToString(BlockPos pos)
-    {
+    private String posToString(BlockPos pos) {
         return "(" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")";
     }
 
-    protected void renderLabel(String name, double x, double y, double z, float angleH, float angleV, boolean giveGravePriority)
-    {
+    protected void renderLabel(String name, double x, double y, double z, float angleH, float angleV, boolean giveGravePriority) {
         FontRenderer fontRenderer = this.mc.fontRenderer;
 
         GlStateManager.pushMatrix();
-        GlStateManager.translate(x+0.5, y+1.5, z+0.5);
+        GlStateManager.translate(x + 0.5, y + 1.5, z + 0.5);
         GlStateManager.glNormal3f(0.0f, 1.0f, 0.0f);
         GlStateManager.rotate(-angleH, 0.0f, 1.0f, 0.0f);
         GlStateManager.rotate(-angleV, 1.0f, 0.0f, 0.0f);
@@ -116,13 +96,13 @@ public class RenderEvents {
         GlStateManager.disableDepth();
 
         GlStateManager.enableBlend();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+        GlStateManager.tryBlendFuncSeparate(
+                GlStateManager.SourceFactor.SRC_ALPHA,
                 GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
                 GlStateManager.SourceFactor.ONE,
                 GlStateManager.DestFactor.ZERO);
         GlStateManager.disableTexture2D();
 
-        Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder vertexBuffer = tessellator.getBuffer();
         int strLenHalved = fontRenderer.getStringWidth(name) / 2;
 
@@ -134,11 +114,9 @@ public class RenderEvents {
         tessellator.draw();
 
         GlStateManager.enableTexture2D();
-
-//        fontRenderer.drawString(name, -strLenHalved, 0, giveGravePriority ? 0xFFFFFF : 0x000000);
         GlStateManager.enableDepth();
-
         GlStateManager.depthMask(true);
+
         fontRenderer.drawString(name, -strLenHalved, 0, giveGravePriority ? FORCE : YIELD);
 
         GlStateManager.disableBlend();

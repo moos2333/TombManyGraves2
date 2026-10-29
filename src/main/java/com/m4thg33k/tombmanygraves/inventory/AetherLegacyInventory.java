@@ -1,21 +1,20 @@
 package com.m4thg33k.tombmanygraves.inventory;
 
-import com.legacy.aether.containers.inventory.InventoryAccessories;
-import com.legacy.aether.player.PlayerAether;
+import com.gildedgames.the_aether.api.AetherAPI;
+import com.gildedgames.the_aether.api.player.IPlayerAether;
 import com.m4thg33k.tombmanygraves.api.GraveInventoryHelper;
 import com.m4thg33k.tombmanygraves.api.GraveRegistry;
 import com.m4thg33k.tombmanygraves.api.IGraveInventory;
 import com.m4thg33k.tombmanygraves.api.TempInventory;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
-/*
- * Does not work AetherLegacy (tested on v3.2) since they dont want to use PlayerDropsEvent to add the accessory drops.
- * Instead, they drop the items themselves and there is pretty much no way for me to catch that.
- */
-@GraveRegistry(id = "aether_legacy", name = "Aether", reqMod = "aether_legacy", overridable = true)
+@GraveRegistry(id = AetherLegacyInventory.UNIQUE_IDENTIFIER, name = "Aether Accessories", reqMod = "aether_legacy")
 public class AetherLegacyInventory implements IGraveInventory {
+
+	public static final String UNIQUE_IDENTIFIER = "aether";
 
 	@Override
 	public boolean pregrabLogic(EntityPlayer player) {
@@ -24,31 +23,34 @@ public class AetherLegacyInventory implements IGraveInventory {
 
 	@Override
 	public TempInventory getItems(EntityPlayer player) {
-		InventoryAccessories ac = PlayerAether.get(player).accessories;
-		for(int i = 0; i < ac.getSizeInventory(); i++){
-			System.out.println(ac.getStackInSlot(i));
+		IPlayerAether aether = AetherAPI.getInstance().get(player);
+		if (aether != null && aether.getAccessoryInventory() != null) {
+			return GraveInventoryHelper.storeInventory((IInventory) aether.getAccessoryInventory());
 		}
-		return GraveInventoryHelper.storeInventory(PlayerAether.get(player).accessories);
+		return null;
 	}
 
 	@Override
 	public void insertInventory(EntityPlayer player, TempInventory graveItems, boolean shouldForce) {
-		InventoryAccessories inventory = PlayerAether.get(player).accessories;
+		IPlayerAether aether = AetherAPI.getInstance().get(player);
+		if (aether == null || aether.getAccessoryInventory() == null) {
+			return;
+		}
+
+		IInventory currentInventory = (IInventory) aether.getAccessoryInventory();
+
 		for (int i = 0; i < graveItems.getSizeInventory(); i++) {
 			ItemStack graveItem = graveItems.getStackInSlot(i);
-
 			if (!graveItem.isEmpty()) {
-				ItemStack playerItem = inventory.getStackInSlot(i).copy();
+				ItemStack currentStack = currentInventory.getStackInSlot(i);
 
-				if (playerItem.isEmpty()) {
-					// No problem, just put the grave item in!
-					inventory.setInventorySlotContents(i, graveItem);
+				if (currentStack.isEmpty()) {
+					currentInventory.setInventorySlotContents(i, graveItem);
 				} else if (shouldForce) {
-					// Slot is blocked, but we're forcing it
-					inventory.setInventorySlotContents(i, graveItem);
+					ItemStack playerItem = currentStack.copy();
+					currentInventory.setInventorySlotContents(i, graveItem);
 					GraveInventoryHelper.dropItem(player, playerItem);
 				} else {
-					// Slot is blocked, but not forcing
 					GraveInventoryHelper.dropItem(player, graveItem);
 				}
 			}

@@ -10,7 +10,7 @@ public class ItemFileControl extends Item {
     {
         super();
 
-        this.setUnlocalizedName(Names.ITEM_FILE_CONTROL);
+        this.setTranslationKey(Names.ITEM_FILE_CONTROL);
 
         this.setMaxStackSize(1);
         this.setRegistryName(Names.MODID, Names.ITEM_FILE_CONTROL);

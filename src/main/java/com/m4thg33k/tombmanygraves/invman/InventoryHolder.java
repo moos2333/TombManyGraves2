@@ -1,9 +1,10 @@
 package com.m4thg33k.tombmanygraves.invman;
 
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,12 +33,14 @@ public class InventoryHolder {
     public static final String Y = "Ycoord";
     public static final String Z = "Zcoord";
 
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("MM_dd_yyyy_HH_mm_ss");
+
     private NBTTagCompound compound = new NBTTagCompound();
     private boolean isEmpty = true;
     private String timestamp = "";
-    private int xcoord = - 1;
-    private int ycoord = - 1;
-    private int zcoord = - 1;
+    private int xcoord = -1;
+    private int ycoord = -1;
+    private int zcoord = -1;
     private String playerName = "unknown";
 
     public InventoryHolder() {
@@ -48,53 +51,60 @@ public class InventoryHolder {
         return isEmpty;
     }
 
-
     public void grabPlayerData(EntityPlayer player) {
-    	HashMap<String, TempInventory> map = GraveInventoryManager.getInstance().grabItemsFromPlayer(player);
+        HashMap<String, TempInventory> map = GraveInventoryManager.getInstance().grabItemsFromPlayer(player);
         isEmpty = map.isEmpty();
         compound = new NBTTagCompound();
-        for(Entry<String, TempInventory> entry : map.entrySet()){
-        	NBTTagList list = new NBTTagList();
-        	entry.getValue().writeToTagList(list);
-        	compound.setTag(entry.getKey(), list);
+        for (Entry<String, TempInventory> entry : map.entrySet()) {
+            NBTTagList list = new NBTTagList();
+            entry.getValue().writeToTagList(list);
+            compound.setTag(entry.getKey(), list);
         }
 
         playerName = player.getName();
         compound.setString(PLAYER_NAME, playerName);
 
-        setTimestamp(new SimpleDateFormat("MM_dd_YYYY_HH_mm_ss").format(new Date()));
+        setTimestamp(TIMESTAMP_FORMATTER.format(LocalDateTime.now()));
     }
-    
-    public List<ItemStack> getAllItems(){
-    	List<ItemStack> list = new ArrayList<>();
-    	for(String key : compound.getKeySet()){
-    		TempInventory inv = new TempInventory(compound.getTagList(key, 10));
-    		list.addAll(inv.getListOfNonEmptyItemStacks());
-    	}
-    	return list;
+
+    public List<ItemStack> getAllItems() {
+        List<ItemStack> list = new ArrayList<>();
+        for (String key : compound.getKeySet()) {
+            TempInventory inv = new TempInventory(compound.getTagList(key, 10));
+            list.addAll(inv.getListOfNonEmptyItemStacks());
+        }
+        return list;
     }
-    
-    public void ensure(List<EntityItem> drops){
-    	for(String key : compound.getKeySet()){
-    		TempInventory inv = new TempInventory(compound.getTagList(key, 10));
-    		for(int i = 0; i < inv.getSizeInventory(); i++){
-    			boolean contains = false;
-    			for(EntityItem itm : drops){
-    				if(ItemStack.areItemStacksEqual(inv.getStackInSlot(i), itm.getItem())){
-    					contains = true;
-    					drops.remove(itm);
-    					break;
-    				}
-    			}
-    			if(!contains){
-    				inv.setInventorySlotContents(i, ItemStack.EMPTY);
-    			}
-    		}
-    		NBTTagList list = new NBTTagList();
-    		inv.writeToTagList(list);
-    		compound.setTag(key, list);
-    	}
-    	isEmpty = getAllItems().isEmpty();
+
+    public void ensure(List<EntityItem> drops) {
+        int nonEmpty = 0;
+        for (String key : compound.getKeySet()) {
+            TempInventory inv = new TempInventory(compound.getTagList(key, 10));
+            for (int i = 0; i < inv.getSizeInventory(); i++) {
+                ItemStack stack = inv.getStackInSlot(i);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+                boolean matched = false;
+                Iterator<EntityItem> it = drops.iterator();
+                while (it.hasNext()) {
+                    if (ItemStack.areItemStacksEqual(stack, it.next().getItem())) {
+                        it.remove();
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    inv.setInventorySlotContents(i, ItemStack.EMPTY);
+                } else {
+                    nonEmpty++;
+                }
+            }
+            NBTTagList list = new NBTTagList();
+            inv.writeToTagList(list);
+            compound.setTag(key, list);
+        }
+        isEmpty = nonEmpty == 0;
     }
 
     public void grabPlayerData(EntityPlayer player, BlockPos pos) {
@@ -159,16 +169,15 @@ public class InventoryHolder {
             this.compound = new NBTTagCompound();
             this.isEmpty = true;
 
-            this.xcoord = - 1;
-            this.ycoord = - 1;
-            this.zcoord = - 1;
+            this.xcoord = -1;
+            this.ycoord = -1;
+            this.zcoord = -1;
 
             this.timestamp = "";
             this.playerName = "unknown";
         }
     }
 
-    // Used to insert (put not replace) inventory items to a player
     public void insertInventory(EntityPlayer player) {
         if (isEmpty) {
             return;
@@ -177,7 +186,6 @@ public class InventoryHolder {
         GraveInventoryManager.getInstance().insertInventory(player, compound, false);
     }
 
-    // Used to force (replace) inventory items on the player
     public void forceInventory(EntityPlayer player) {
         if (isEmpty) {
             return;
@@ -186,19 +194,14 @@ public class InventoryHolder {
         GraveInventoryManager.getInstance().insertInventory(player, compound, true);
     }
 
-    // Used to drop all items at a specific player's location
     public void dropInventory(EntityPlayer player) {
         dropInventory(player.getEntityWorld(), player.getPosition());
     }
 
-    // Used to drop all items at a specific position in a world
     public void dropInventory(World world, BlockPos pos) {
-        GraveInventoryManager
-                .getInstance()
-                .generateDrops(compound)
-                .forEach(
-                        itemStack -> InventoryHelper.spawnItemStack(world, pos.getX(), pos.getY(), pos.getZ(), itemStack)
-                );
+        for (ItemStack itemStack : GraveInventoryManager.getInstance().generateDrops(compound)) {
+            InventoryHelper.spawnItemStack(world, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+        }
     }
 
     public static void dropItem(EntityPlayer player, ItemStack stack) {

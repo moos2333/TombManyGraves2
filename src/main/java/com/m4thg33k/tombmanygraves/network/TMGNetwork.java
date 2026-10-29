@@ -80,7 +80,7 @@ public class TMGNetwork {
 
     public static void sendToClients(WorldServer world, BlockPos pos, BasePacket packet)
     {
-        Chunk chunk = world.getChunkFromBlockCoords(pos);
+        Chunk chunk = world.getChunk(pos);
         for (EntityPlayer player : world.playerEntities)
         {
             if (!(player instanceof EntityPlayerMP))

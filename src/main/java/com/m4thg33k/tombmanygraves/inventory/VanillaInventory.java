@@ -16,13 +16,12 @@ public class VanillaInventory implements IGraveInventory {
 
 	@Override
 	public boolean pregrabLogic(EntityPlayer player) {
-		// Vanilla Minecraft always allows graves to form
 		return true;
 	}
 
 	@Override
 	public TempInventory getItems(EntityPlayer player) {
-		return GraveInventoryHelper.storeInventory((player.inventory));
+		return GraveInventoryHelper.storeInventory(player.inventory);
 	}
 
 	@Override
@@ -32,19 +31,15 @@ public class VanillaInventory implements IGraveInventory {
 		for (int i = 0; i < graveItems.getSizeInventory(); i++) {
 			ItemStack graveItem = graveItems.getStackInSlot(i);
 			if (!graveItem.isEmpty()) {
-				ItemStack playerItem = currentInventory.getStackInSlot(i).copy();
+				ItemStack currentStack = currentInventory.getStackInSlot(i);
 
-				if (playerItem.isEmpty()) {
-					// No problem, just put the grave item in!
+				if (currentStack.isEmpty()) {
 					currentInventory.setInventorySlotContents(i, graveItem);
 				} else if (shouldForce) {
-					// Slot is blocked, but we're forcing the grave item into
-					// place.
+					ItemStack playerItem = currentStack.copy();
 					currentInventory.setInventorySlotContents(i, graveItem);
 					GraveInventoryHelper.dropItem(player, playerItem);
 				} else {
-					// Slot is blocked, but we're not forcing items in - drop
-					// the grave item
 					GraveInventoryHelper.dropItem(player, graveItem);
 				}
 			}

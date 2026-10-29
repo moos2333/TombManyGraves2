@@ -8,6 +8,7 @@ import com.m4thg33k.tombmanygraves.api.IGraveInventory;
 import com.m4thg33k.tombmanygraves.commands.ModCommands;
 import com.m4thg33k.tombmanygraves.invman.GraveInventoryManager;
 import com.m4thg33k.tombmanygraves.proxy.CommonProxy;
+import com.m4thg33k.tombmanygraves.util.LogHelper;
 
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
@@ -22,6 +23,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 public class TombManyGraves {
 
 	public static final String DEPENDENCIES = "required-after:forge@[14.23.3.2655,)";
+
 	private static Set<ASMData> moduleASM;
 
 	@Mod.Instance
@@ -39,18 +41,27 @@ public class TombManyGraves {
 	@Mod.EventHandler
 	public void init(FMLInitializationEvent e) {
 		proxy.init(e);
+		if (moduleASM == null) {
+			LogHelper.error("ASM data table was not available; no grave inventory listeners will be registered.");
+			return;
+		}
+		ClassLoader loader = TombManyGraves.class.getClassLoader();
 		for (ASMData data : moduleASM) {
+			String className = data.getClassName();
 			try {
-				Class<?> c = Class.forName(data.getClassName());
-				if (IGraveInventory.class.isAssignableFrom(c)) {
-					Map<String, Object> annotation = data.getAnnotationInfo();
-					String reqMod = (String) annotation.get("reqMod");
-					if (reqMod == null || Loader.isModLoaded(reqMod)){
-						GraveInventoryManager.getInstance().registerListener((IGraveInventory) c.newInstance(), annotation);
-					}
+				Map<String, Object> annotation = data.getAnnotationInfo();
+				String reqMod = (String) annotation.get("reqMod");
+				if (reqMod != null && !Loader.isModLoaded(reqMod)) {
+					continue;
 				}
-			} catch (Exception ex) {
-				ex.printStackTrace();
+				Class<?> c = Class.forName(className, true, loader);
+				if (!IGraveInventory.class.isAssignableFrom(c)) {
+					continue;
+				}
+				GraveInventoryManager.getInstance().registerListener(
+						(IGraveInventory) c.getDeclaredConstructor().newInstance(), annotation);
+			} catch (Throwable t) {
+				LogHelper.error("Failed to register grave inventory listener " + className + ": " + t);
 			}
 		}
 	}
@@ -58,8 +69,6 @@ public class TombManyGraves {
 	@Mod.EventHandler
 	public void postinit(FMLPostInitializationEvent e) {
 		proxy.postinit(e);
-
-		// Make sure to finalize the listeners so the mod actually works...
 		GraveInventoryManager.getInstance().finalizeListeners();
 	}
 

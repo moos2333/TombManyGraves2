@@ -5,9 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -44,8 +42,8 @@ public class GraveInventoryManager {
 		return INSTANCE;
 	}
 
-	public Stream<Map.Entry<String, IGraveInventory>> getGraveInventoryStream() {
-		return this.sortedListeners.stream();
+	public List<Map.Entry<String, IGraveInventory>> getSortedListeners() {
+		return sortedListeners;
 	}
 
 	public static int getGuiColorForInventory(String key) {
@@ -53,17 +51,11 @@ public class GraveInventoryManager {
 		if (instance.listenerMap.containsKey(key)) {
 			return instance.annotationMap.get(instance.listenerMap.get(key)).color();
 		}
-		return 0; // default to black
+		return 0;
 	}
 
 	private int clampPriority(int priority) {
-		if (priority < -10) {
-			return -10;
-		} else if (priority > 10) {
-			return 10;
-		} else {
-			return priority;
-		}
+		return Math.max(-10, Math.min(10, priority));
 	}
 
 	@ParametersAreNonnullByDefault
@@ -72,24 +64,15 @@ public class GraveInventoryManager {
 		annotationMap.put(iGraveInventory, iGraveInventory.getClass().getDeclaredAnnotation(GraveRegistry.class));
 		LogHelper.info("Attempting to register special inventory: " + uniqueId);
 		if (listenerMap.containsKey(uniqueId)) {
-			// Already exists
-
-			if (!(boolean)annotation.get("overridable")) {
-				// We can't overwrite the new one
+			if (!(boolean) annotation.get("overridable")) {
 				if (annotationMap.get(listenerMap.get(uniqueId)).overridable()) {
-					// The current one *is* overwritable, so replace it
 					listenerMap.put(uniqueId, iGraveInventory);
 					LogHelper.info("Special inventory with id (" + uniqueId + ") already exists, but is able to be overwritten. Replacing existing inventory.");
 				} else {
-					// Neither is overwritable
 					throw new Exception("Unable to register listener for TombManyGraves with unique id: " + uniqueId + ". A listener with that id has already been registered and cannot be overwritten!");
 				}
-			}
-			// No "else" really - if the new one is overwritable, we use the one
-			// that's already in the map!
-			else {
+			} else {
 				LogHelper.info("Special inventory with id (" + uniqueId + ") already exists, but the new one is able to be overwritten. Ignoring new inventory.");
-
 			}
 		} else {
 			LogHelper.info("Added special inventory with id (" + uniqueId + ") to TombManyGraves.");
@@ -99,15 +82,15 @@ public class GraveInventoryManager {
 
 	public void finalizeListeners() {
 		sortedListeners = this.listenerMap.entrySet().stream().sorted((x, y) -> {
-			System.out.println(annotationMap.get(x.getValue()));
-			int flag = -Integer.compare(clampPriority(annotationMap.get(x.getValue()).priority()), annotationMap.get(y.getValue()).priority());
+			int flag = -Integer.compare(
+					clampPriority(annotationMap.get(x.getValue()).priority()),
+					clampPriority(annotationMap.get(y.getValue()).priority()));
 			if (flag == 0) {
 				flag = x.getKey().compareTo(y.getKey());
 			}
 			return flag;
 		}).collect(Collectors.toList());
 
-		// also create the gui order (alphabetical apart from Main Inventory)
 		sortedGuiNames = this.listenerMap.keySet().stream().sorted((x, y) -> {
 			if (VanillaInventory.UNIQUE_IDENTIFIER.equals(x)) {
 				return -1;
@@ -125,7 +108,7 @@ public class GraveInventoryManager {
 
 	public HashMap<String, TempInventory> grabItemsFromPlayer(EntityPlayer player) {
 
-		Iterator<Map.Entry<String, IGraveInventory>> iter = getGraveInventoryStream().iterator();
+		Iterator<Map.Entry<String, IGraveInventory>> iter = sortedListeners.iterator();
 		boolean shouldContinue = true;
 		while (iter.hasNext()) {
 			shouldContinue = iter.next().getValue().pregrabLogic(player);
@@ -135,64 +118,55 @@ public class GraveInventoryManager {
 		}
 		HashMap<String, TempInventory> itms = new HashMap<>();
 		if (!shouldContinue) {
-			// a special inventory decided that the grave should not form!
 			return itms;
 		}
-		//NBTTagCompound compound = new NBTTagCompound();
-		AtomicInteger numAdded = new AtomicInteger(0);
 
-		getGraveInventoryStream().forEach(entry -> {
+		for (Map.Entry<String, IGraveInventory> entry : sortedListeners) {
 			TempInventory data = entry.getValue().getItems(player);
 			if (data != null) {
 				itms.put(entry.getKey(), data);
-				numAdded.incrementAndGet();
 			}
-		});
+		}
 
 		return itms;
 	}
 
 	public void insertInventory(EntityPlayer player, NBTTagCompound compound, boolean shouldForce) {
 		if (compound != null) {
-			getGraveInventoryStream().forEach(entry -> {
+			for (Map.Entry<String, IGraveInventory> entry : sortedListeners) {
 				if (compound.hasKey(entry.getKey())) {
 					entry.getValue().insertInventory(player, new TempInventory(compound.getTagList(entry.getKey(), 10)), shouldForce);
 				}
-			});
+			}
 		}
 	}
 
 	public List<ItemStack> generateDrops(NBTTagCompound compound) {
 		List<ItemStack> drops = new ArrayList<>();
 		if (compound != null) {
-			getGraveInventoryStream().forEach(entry -> {
+			for (Map.Entry<String, IGraveInventory> entry : sortedListeners) {
 				if (compound.hasKey(entry.getKey())) {
 					TempInventory inv = new TempInventory(compound.getTagList(entry.getKey(), 10));
 					drops.addAll(inv.getListOfNonEmptyItemStacks());
 				}
-			});
+			}
 		}
 
 		return drops;
 	}
 
-	// Returns a map where the keys are the keys of the special inventory
-	// listeners and the values are tuples
-	// where the first value is the name of inventory for the gui and the second
-	// value is a list of string
-	// describing the items in that inventory.
 	public Map<String, Tuple<String, List<String>>> createItemListForGui(NBTTagCompound compound) {
 		Map<String, Tuple<String, List<String>>> theMap = new HashMap<>();
 
-		getGraveInventoryStream().forEach(entry -> {
+		for (Map.Entry<String, IGraveInventory> entry : sortedListeners) {
 			if (compound.hasKey(entry.getKey())) {
 				TempInventory inv = new TempInventory(compound.getTagList(entry.getKey(), 10));
 				List<ItemStack> drops = inv.getListOfNonEmptyItemStacks();
-				if (drops.size() > 0) {
+				if (!drops.isEmpty()) {
 					theMap.put(entry.getKey(), new Tuple<>(annotationMap.get(entry.getValue()).name(), TempInventory.getGuiStringsForItemStackList(drops)));
 				}
 			}
-		});
+		}
 
 		return theMap;
 	}

@@ -38,7 +38,7 @@ public class BlockGrave extends BaseBlock {
         super(Names.GRAVE_BLOCK, Material.WOOD, 100.0f, 100.0f);
 
         this.setBlockUnbreakable();
-        
+
         this.setRegistryName(Names.MODID, Names.GRAVE_BLOCK);
 
         this.setDefaultState(((IExtendedBlockState) blockState.getBaseState())
@@ -49,18 +49,19 @@ public class BlockGrave extends BaseBlock {
 
     @Override
     public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state, EntityPlayer playerIn, EnumHand hand, EnumFacing heldItem, float side, float hitX, float hitY) {
-        if (!worldIn.isRemote)
-        {
+        if (!worldIn.isRemote) {
             TileEntity tile = worldIn.getTileEntity(pos);
-            if (tile != null && tile instanceof TileGrave)
-            {
-                if (playerIn.isSneaking())
-                {
-                    ((TileGrave) tile).toggleLock(playerIn);
-                }
-                else
-                {
-                    ((TileGrave) tile).onRightClick(playerIn);
+            if (tile instanceof TileGrave) {
+                TileGrave grave = (TileGrave) tile;
+
+                if (playerIn.isSneaking()) {
+                    grave.toggleLock(playerIn);
+                } else if (grave.isLocked()) {
+                    grave.onRightClick(playerIn);
+                } else if (hand == EnumHand.MAIN_HAND && grave.hasAccess(playerIn)) {
+                    grave.onCollision(playerIn);
+                } else {
+                    grave.onRightClick(playerIn);
                 }
             }
         }
@@ -93,7 +94,7 @@ public class BlockGrave extends BaseBlock {
                 .withProperty(TMGStateProps.HELD_POS, pos);
 
         TileEntity tile = world.getTileEntity(pos);
-        if (tile != null && tile instanceof TileGrave)
+        if (tile instanceof TileGrave)
         {
             state = ((IExtendedBlockState)state).withProperty(TMGStateProps.HELD_STATE,
                     ((TileGrave) tile).getCamoState());
@@ -119,7 +120,7 @@ public class BlockGrave extends BaseBlock {
     public void addCollisionBoxToList(IBlockState state,World worldIn, BlockPos pos, AxisAlignedBB entityBox,
                                       List<AxisAlignedBB> collidingBoxes,@Nullable Entity entityIn, boolean bool) {
         TileEntity tile = worldIn.getTileEntity(pos);
-        if (tile != null && tile instanceof TileGrave)
+        if (tile instanceof TileGrave)
         {
             if (entityIn instanceof EntityPlayer &&
                     !(((TileGrave) tile).isLocked()) &&
@@ -151,36 +152,34 @@ public class BlockGrave extends BaseBlock {
     }
 
     @Override
-    public void onEntityCollidedWithBlock(World worldIn, BlockPos pos, IBlockState state, Entity entityIn) {
+    public void onEntityCollision(World worldIn, BlockPos pos, IBlockState state, Entity entityIn) {
+        if (!(entityIn instanceof EntityPlayer)) {
+            return;
+        }
+        EntityPlayer player = (EntityPlayer) entityIn;
+        if (!player.isEntityAlive()) {
+            return;
+        }
         TileEntity tile = worldIn.getTileEntity(pos);
-        if (tile != null && tile instanceof TileGrave)
-        {
-            if (entityIn instanceof EntityPlayer && entityIn.isEntityAlive())
-            {
-                if (ModConfigs.REQUIRE_SNEAKING)
-                {
-                    if (entityIn.isSneaking())
-                    {
-                        ((TileGrave) tile).onCollision((EntityPlayer) entityIn);
-                    }
+        if (tile instanceof TileGrave) {
+            TileGrave grave = (TileGrave) tile;
+            if (ModConfigs.REQUIRE_SNEAKING) {
+                if (player.isSneaking()) {
+                    grave.onCollision(player);
                 }
-                else
-                {
-                    ((TileGrave) tile).onCollision((EntityPlayer) entityIn);
-                }
+            } else {
+                grave.onCollision(player);
             }
         }
     }
 
     @Override
     public void breakBlock(@Nonnull World worldIn, @Nonnull BlockPos pos, @Nonnull IBlockState state) {
-        // TODO: 1/15/2017 set logic once TE implemented
     }
 
     @Nonnull
     @Override
     public EnumBlockRenderType getRenderType(IBlockState state) {
-        // TODO: 1/15/2017 implement once model is coded
         return super.getRenderType(state);
     }
 

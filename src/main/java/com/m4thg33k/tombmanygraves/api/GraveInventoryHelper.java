@@ -14,7 +14,7 @@ public class GraveInventoryHelper {
 
 		for (int i = 0; i < inventory.getSizeInventory(); i++) {
 			ItemStack stack = inventory.getStackInSlot(i);
-			copy.setInventorySlotContents(i, stack.copy());
+			copy.setInventorySlotContents(i, stack.isEmpty() ? ItemStack.EMPTY : stack.copy());
 		}
 		return copy;
 	}

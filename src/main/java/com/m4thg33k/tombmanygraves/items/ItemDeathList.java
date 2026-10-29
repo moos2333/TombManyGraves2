@@ -31,7 +31,7 @@ public class ItemDeathList extends Item{
     {
         super();
 
-        this.setUnlocalizedName(Names.DEATH_LIST);
+        this.setTranslationKey(Names.DEATH_LIST);
 
         this.setMaxStackSize(1);
         this.setRegistryName(Names.MODID, Names.DEATH_LIST);

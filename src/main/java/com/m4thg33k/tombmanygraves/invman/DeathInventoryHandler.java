@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,7 +24,7 @@ import net.minecraft.util.math.BlockPos;
 
 public class DeathInventoryHandler {
 
-    private static String FILE_PREFIX = "." + "/TombManyGraves/savedInventories";
+    private static final String FILE_PREFIX = "./TombManyGraves/savedInventories";
 
     public static boolean checkFilePath()
     {
@@ -43,12 +42,10 @@ public class DeathInventoryHandler {
     {
         boolean hasPath = checkFilePath();
 
-        if (! ModConfigs.ALLOW_INVENTORY_SAVES || !hasPath)
+        if (!ModConfigs.ALLOW_INVENTORY_SAVES || !hasPath)
         {
             return false;
         }
-
-        boolean didWork = false;
 
         String filename = "/" + inventoryHolder.getPlayerName();
         String timestamp = inventoryHolder.getTimestamp();
@@ -56,9 +53,8 @@ public class DeathInventoryHandler {
 
         String fullFilename = FILE_PREFIX + filename + "#" + filePostfix;
 
-        NBTTagCompound tagCompound = new NBTTagCompound();
-        tagCompound = inventoryHolder.writeToNBT(tagCompound);
-        didWork = writePortion(fullFilename, tagCompound.toString());
+        NBTTagCompound tagCompound = inventoryHolder.writeToNBT(new NBTTagCompound());
+        boolean didWork = writePortion(fullFilename, tagCompound.toString());
 
         if (didWork)
         {
@@ -78,27 +74,22 @@ public class DeathInventoryHandler {
 
     private static boolean writePortion(String filename, String toWrite)
     {
-        boolean didWork = true;
-
         try (FileWriter file = new FileWriter(filename))
         {
             file.write(toWrite);
-            file.close();
+            return true;
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            didWork = false;
+            return false;
         }
-
-        return didWork;
     }
 
     public static void clearLatest(EntityPlayer player)
     {
         String filename = "/" + player.getName();
-        String timestamp = "latest";
-        String filePostfix = timestamp + ".json";
+        String filePostfix = "latest" + ".json";
 
         String fullFilename = FILE_PREFIX + filename + "#" + filePostfix;
         writePortion(fullFilename, "{}");
@@ -113,6 +104,10 @@ public class DeathInventoryHandler {
             return saved;
         }
         String[] files = new File(FILE_PREFIX).list();
+        if (files == null)
+        {
+            return saved;
+        }
         for (String file : files)
         {
             if (file.endsWith(".json"))
@@ -133,11 +128,15 @@ public class DeathInventoryHandler {
             return saved;
         }
         String[] files = new File(FILE_PREFIX).list();
+        if (files == null)
+        {
+            return saved;
+        }
         for (String file : files)
         {
             if (file.startsWith(playerName) && file.endsWith(".json"))
             {
-                saved.add(file.substring(playerName.length()+1, file.length()-5));
+                saved.add(file.substring(playerName.length() + 1, file.length() - 5));
             }
         }
 
@@ -147,30 +146,20 @@ public class DeathInventoryHandler {
     public static ItemStack getDeathListFromFile(String playerName, String timestamp){
         String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
 
-        BufferedReader reader = null;
-
-        try{
-            reader = new BufferedReader(new FileReader(filename));
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename)))
+        {
             String fileData = reader.readLine();
             NBTTagCompound allNBT = JsonToNBT.getTagFromJson(fileData);
-            if (allNBT.getKeySet().size() > 0){
+            if (!allNBT.isEmpty()){
                 ItemStack theList = new ItemStack(ModItems.itemDeathList, 1);
                 theList.setTagCompound(allNBT);
-                
                 return theList;
             }
 
             return null;
         } catch (Exception e){
             return null;
-        }finally {
-			if(reader != null)
-				try {
-					reader.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-		}
+        }
     }
 
     public static boolean getDeathList(EntityPlayer playerOld, EntityPlayer playerNew, String playerName, String timestamp, boolean didDie)
@@ -179,14 +168,11 @@ public class DeathInventoryHandler {
 
         String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
 
-        BufferedReader reader;
-
-        try
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename)))
         {
-            reader = new BufferedReader(new FileReader(filename));
             String fileData = reader.readLine();
             NBTTagCompound allNBT = JsonToNBT.getTagFromJson(fileData);
-            if (allNBT.getKeySet().size() > 0)
+            if (!allNBT.isEmpty())
             {
                 ItemStack theList = new ItemStack(ModItems.itemDeathList, 1);
                 theList.setTagCompound(allNBT);
@@ -196,21 +182,15 @@ public class DeathInventoryHandler {
                 if (didDie)
                 {
                     thePlayer = playerNew;
-//                    LogHelper.info("Player respawn dimension: " + playerOld.getSpawnDimension());
-//                    LogHelper.info("Player respawn dimension: " + playerOld.world.provider.getRespawnDimension((EntityPlayerMP)playerOld));
-//                    LogHelper.info(playerOld.hasSpawnDimension());
-//                    BlockPos bedPos = player.getBedLocation(player.getSpawnDimension());
                     BlockPos bedPos = playerOld.getBedLocation(playerOld.world.provider.getDimension());
                     if (bedPos != null)
                     {
-//                        LogHelper.info("A " + bedPos.toString());
                         pos = bedPos;
                     }
                     else
                     {
                         bedPos = playerOld.getBedLocation(playerOld.getSpawnDimension());
                         if (bedPos != null){
-//                            LogHelper.info("B " + bedPos.toString());
                             pos = bedPos;
                         } else {
                             pos = playerOld.world.getSpawnPoint();
@@ -219,15 +199,11 @@ public class DeathInventoryHandler {
                 }
                 EntityItem entityItem = new EntityItem(thePlayer.world, pos.getX(), pos.getY(), pos.getZ(), theList);
                 thePlayer.world.spawnEntity(entityItem);
-//                EntityItem entityItem = new EntityItem(playerOld.world, pos.getX(), pos.getY(), pos.getZ(), theList);
-//                playerOld.world.spawnEntity(entityItem);
-//                LogHelper.info("Spawning Death List in world: " + thePlayer.world.provider.getDimension() + " at location: " + pos.toString());
             }
             else
             {
                 ChatHelper.sayMessage(playerOld.world, playerOld, playerName + " had no items upon death!");
             }
-            reader.close();
         }
         catch (Exception e)
         {
@@ -240,14 +216,10 @@ public class DeathInventoryHandler {
     {
         String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
 
-        BufferedReader reader;
-
-        try
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename)))
         {
-            reader = new BufferedReader(new FileReader(filename));
             String fileData = reader.readLine();
             NBTTagCompound allNBT = JsonToNBT.getTagFromJson(fileData);
-            reader.close();
             return allNBT;
         } catch (Exception e)
         {

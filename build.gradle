@@ -1,76 +1,73 @@
-buildscript {
-    repositories {
-        jcenter()
-        maven { url = "http://files.minecraftforge.net/maven" }
-    }
-    dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+plugins {
+    id 'java'
+    id 'com.gtnewhorizons.retrofuturagradle' version '2.0.3'
+}
+
+version = '1.12-4.2.1-fork'
+group = 'com.m4thg33k.tombmanygraves'
+
+base {
+    archivesName = 'TombManyGraves'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
-//Only edit below this line, the above code adds and enables the nessasary things for Forge to be setup.
 
-version = "1.12-4.2.0"
-group= "com.m4thg33k.tombmanygraves" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "TombManyGraves"
-
-sourceCompatibility = targetCompatibility = "1.8" // Need this here so eclipse task generates correctly.
-compileJava {
-    sourceCompatibility = targetCompatibility = "1.8"
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
 }
 
 minecraft {
-    version = "1.12.2-14.23.4.2759"
-    runDir = "run"
-    mappings = "snapshot_20171010"
-
-    replace "@VERSION@", project.version
+    mcVersion = '1.12.2'
+    mcpMappingChannel = 'stable'
+    mcpMappingVersion = '39'
+    username = 'Developer'
+    injectedTags.put('VERSION', project.version)
 }
 
 repositories {
     maven {
-        url "http://dvs1.progwml6.com/files/maven"
+        name = 'CleanroomMC Maven'
+        url = 'https://maven.cleanroommc.com'
     }
     maven {
-        url "http://maven.epoxide.xyz"
+        name = 'GTNH Maven'
+        url = 'https://nexus.gtnewhorizons.com/repository/public/'
     }
     maven {
-        url "http://maven.amadornes.com/"
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
     }
-	maven {
-		url "http://tehnut.info/maven"
-	}
-	maven {
-		url "http://maven.ic2.player.to"
-	}
-	maven {
-        name = "CurseForge"
-        url = "https://minecraft.curseforge.com/api/maven/"
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
     }
+    maven { url = 'https://jitpack.io' }
+    mavenCentral()
 }
 
 dependencies {
-	deobfCompile "mezz.jei:jei_1.12:+"
-	deobfCompile 'baubles:Baubles:1.12:1.5.2'
-//	deobfCompile "mcp.mobius.waila:Hwyla:+"
+    implementation rfg.deobf('mezz.jei:jei_1.12.2:4.16.1.301')
+    implementation rfg.deobf('com.github.azanor:Baubles:7035b13')
+
+    compileOnly rfg.deobf('curse.maven:aether-255308:6316434')
+    compileOnly rfg.deobf('curse.maven:angry-pixel-the-betweenlands-mod-243363:4479688')
+    compileOnly rfg.deobf('curse.maven:galacticraft-legacy-564236:4399905')
+    compileOnly rfg.deobf('curse.maven:techguns-ce-1417575:7409099')
+
+    compileOnly files('libs/backpack-3.0.2-1.12.2.jar')
+    compileOnly files('libs/CosmeticArmorReworked-1.12.2-v5a.jar')
 }
 
-processResources
-{
-    // this will ensure that this task is redone when the versions change.
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
-
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-                
-        // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
-    }
-        
-    // copy everything else, thats not the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+tasks.processResources {
+    inputs.property 'version', project.version
+    inputs.property 'mcversion', minecraft.mcVersion
+    filesMatching('mcmod.info') {
+        expand 'version': project.version, 'mcversion': minecraft.mcVersion
     }
 }

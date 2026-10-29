@@ -2,8 +2,6 @@ package com.m4thg33k.tombmanygraves.api;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.inventory.InventoryBasic;
@@ -24,7 +22,7 @@ public class TempInventory extends InventoryBasic {
     }
 
     private static int getMaxSlotInTagList(NBTTagList tagList) {
-        int max = - 1;
+        int max = -1;
         for (int i = 0; i < tagList.tagCount(); i++) {
             NBTTagCompound compound = tagList.getCompoundTagAt(i);
             int val = compound.getByte("Slot") & 255;
@@ -38,10 +36,11 @@ public class TempInventory extends InventoryBasic {
 
     public NBTTagList writeToTagList(NBTTagList list) {
         for (int i = 0; i < this.getSizeInventory(); i++) {
-            if (! this.getStackInSlot(i).isEmpty()) {
+            ItemStack stack = this.getStackInSlot(i);
+            if (!stack.isEmpty()) {
                 NBTTagCompound compound = new NBTTagCompound();
                 compound.setByte("Slot", (byte) i);
-                this.getStackInSlot(i).writeToNBT(compound);
+                stack.writeToNBT(compound);
                 list.appendTag(compound);
             }
         }
@@ -61,7 +60,7 @@ public class TempInventory extends InventoryBasic {
         List<ItemStack> ret = new ArrayList<>();
         for (int i = 0; i < this.getSizeInventory(); i++) {
             ItemStack inSlot = this.getStackInSlot(i);
-            if (! inSlot.isEmpty()) {
+            if (!inSlot.isEmpty()) {
                 ret.add(inSlot);
             }
         }
@@ -69,50 +68,47 @@ public class TempInventory extends InventoryBasic {
         return ret;
     }
 
-    public static List<String> getGuiStringsForItemStack(int number, ItemStack stack){
+    public static List<String> getGuiStringsForItemStack(int number, ItemStack stack) {
         List<String> ret = new ArrayList<>();
 
-        if (!stack.isEmpty()){
+        if (!stack.isEmpty()) {
             String name = stack.getDisplayName();
-            if (name.length() > 28){
+            if (name.length() > 28) {
                 name = name.substring(0, 25) + "...";
             }
 
             ret.add(number + ") " + name + (stack.getCount() > 1 ? " x" + stack.getCount() : ""));
-            ret.addAll(
-                    EnchantmentHelper.getEnchantments(stack)
-                    .entrySet()
-                    .stream()
-                    .map(entry -> "    " + entry.getKey().getTranslatedName(entry.getValue()))
-                    .collect(Collectors.toList())
-            );
 
-            // Todo possibly handle backpack items to show internal contents. Maybe not...
+            for (java.util.Map.Entry<net.minecraft.enchantment.Enchantment, Integer> entry
+                    : EnchantmentHelper.getEnchantments(stack).entrySet()) {
+                ret.add("    " + entry.getKey().getTranslatedName(entry.getValue()));
+            }
         }
 
         return ret;
     }
 
-    public static List<String> getGuiStringsForItemStackList(List<ItemStack> items){
+    public static List<String> getGuiStringsForItemStackList(List<ItemStack> items) {
         List<String> ret = new ArrayList<>();
-        AtomicInteger itemNumber = new AtomicInteger(1);
+        int number = 1;
 
-        items.stream().forEach(
-                stack -> ret.addAll(getGuiStringsForItemStack(itemNumber.getAndIncrement(), stack))
-        );
+        for (ItemStack stack : items) {
+            ret.addAll(getGuiStringsForItemStack(number++, stack));
+        }
 
         return ret;
     }
 
     public ArrayList<String> getListOfItemsInInventoryAsStrings() {
         ArrayList<String> ret = new ArrayList<>();
-        final AtomicInteger itemNumber = new AtomicInteger(1);
+        int number = 1;
 
-        this.getListOfNonEmptyItemStacks()
-                .stream()
-                .forEach(
-                        inSlot -> ret.addAll(getGuiStringsForItemStack(itemNumber.getAndIncrement(), inSlot))
-                );
+        for (int i = 0; i < this.getSizeInventory(); i++) {
+            ItemStack inSlot = this.getStackInSlot(i);
+            if (!inSlot.isEmpty()) {
+                ret.addAll(getGuiStringsForItemStack(number++, inSlot));
+            }
+        }
 
         return ret;
     }

@@ -22,38 +22,33 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public class ClientEvents {
 
-    private static final ResourceLocation graveModel = Utility.getResource("block/grave");
-    private static final ModelResourceLocation graveModelLocation =
+    private static final ResourceLocation GRAVE_MODEL = Utility.getResource("block/grave");
+    private static final ModelResourceLocation GRAVE_MODEL_LOCATION =
             Utility.getModelResource(Names.GRAVE_BLOCK, "normal");
+    private static final ResourceLocation RED_SPRITE = new ResourceLocation(Names.MODID, "blocks/red");
+
+    private final Minecraft mc = Minecraft.getMinecraft();
 
     @SubscribeEvent
-    public void onModelBake(ModelBakeEvent event)
-    {
-        try
-        {
-            IModel model = ModelLoaderRegistry.getModel(graveModel);
-            
-                IBakedModel standard = event.getModelRegistry().getObject(graveModelLocation);
-                IBakedModel finalModel = new AdaptiveGraveModel(standard, model);
-                event.getModelRegistry().putObject(graveModelLocation, finalModel);
-        }
-        catch (Exception e)
-        {
+    public void onModelBake(ModelBakeEvent event) {
+        try {
+            IModel model = ModelLoaderRegistry.getModel(GRAVE_MODEL);
+            IBakedModel standard = event.getModelRegistry().getObject(GRAVE_MODEL_LOCATION);
+            IBakedModel finalModel = new AdaptiveGraveModel(standard, model);
+            event.getModelRegistry().putObject(GRAVE_MODEL_LOCATION, finalModel);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     @SubscribeEvent
-    public void stitchTextures(TextureStitchEvent.Pre pre)
-    {
-        pre.getMap().registerSprite(new ResourceLocation(Names.MODID, "blocks/red"));
+    public void stitchTextures(TextureStitchEvent.Pre pre) {
+        pre.getMap().registerSprite(RED_SPRITE);
     }
 
     @SubscribeEvent
-    public void onRenderWorldLast(RenderWorldLastEvent event)
-    {
-        Profiler profiler = Minecraft.getMinecraft().mcProfiler;
-
+    public void onRenderWorldLast(RenderWorldLastEvent event) {
+        Profiler profiler = mc.profiler;
         profiler.startSection("tmg_particles");
         ParticleRenderDispatcher.dispatch();
         profiler.endSection();
