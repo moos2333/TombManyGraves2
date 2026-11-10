@@ -28,6 +28,7 @@ import net.minecraft.inventory.InventoryHelper;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.Tuple;
@@ -65,12 +66,15 @@ public class InventoryHolder {
 
     public void grabPlayerData(EntityPlayer player) {
         HashMap<String, TempInventory> map = GraveInventoryManager.getInstance().grabItemsFromPlayer(player);
-        isEmpty = map.isEmpty();
         compound = new NBTTagCompound();
+        isEmpty = true;
         for (Entry<String, TempInventory> entry : map.entrySet()) {
             NBTTagList list = new NBTTagList();
             entry.getValue().writeToTagList(list);
-            compound.setTag(entry.getKey(), list);
+            if (list.tagCount() > 0) {
+                compound.setTag(entry.getKey(), list);
+                isEmpty = false;
+            }
         }
 
         playerName = player.getName();
@@ -90,6 +94,7 @@ public class InventoryHolder {
 
     public void ensure(List<EntityItem> drops) {
         int nonEmpty = 0;
+        List<String> emptyKeys = new ArrayList<>();
         for (String key : compound.getKeySet()) {
             TempInventory inv = new TempInventory(compound.getTagList(key, 10));
             for (int i = 0; i < inv.getSizeInventory(); i++) {
@@ -114,7 +119,14 @@ public class InventoryHolder {
             }
             NBTTagList list = new NBTTagList();
             inv.writeToTagList(list);
-            compound.setTag(key, list);
+            if (list.tagCount() > 0) {
+                compound.setTag(key, list);
+            } else {
+                emptyKeys.add(key);
+            }
+        }
+        for (String key : emptyKeys) {
+            compound.removeTag(key);
         }
         isEmpty = nonEmpty == 0;
     }
@@ -173,17 +185,10 @@ public class InventoryHolder {
 
     public void readFromNBT(NBTTagCompound inCompound) {
         if (inCompound.hasKey(TAG_COMPRESSED)) {
-            byte[] compressed = inCompound.getByteArray(TAG_COMPRESSED);
-            NBTTagCompound restored = decompressOrNull(compressed);
+            NBTTagCompound restored = decompressOrNull(inCompound.getByteArray(TAG_COMPRESSED));
             if (restored == null) {
                 LogHelper.error("Failed to decompress saved inventory; data may be corrupted.");
-                this.compound = new NBTTagCompound();
-                this.isEmpty = true;
-                this.xcoord = -1;
-                this.ycoord = -1;
-                this.zcoord = -1;
-                this.timestamp = "";
-                this.playerName = "unknown";
+                resetToEmpty();
                 return;
             }
             this.compound = restored;
@@ -192,13 +197,7 @@ public class InventoryHolder {
             this.compound = inCompound.getCompoundTag(TAG_NAME);
             this.isEmpty = inCompound.getBoolean(EMPTY);
         } else {
-            this.compound = new NBTTagCompound();
-            this.isEmpty = true;
-            this.xcoord = -1;
-            this.ycoord = -1;
-            this.zcoord = -1;
-            this.timestamp = "";
-            this.playerName = "unknown";
+            resetToEmpty();
             return;
         }
 
@@ -208,6 +207,16 @@ public class InventoryHolder {
 
         this.timestamp = compound.getString(TIMESTAMP);
         this.playerName = compound.getString(PLAYER_NAME);
+    }
+
+    private void resetToEmpty() {
+        this.compound = new NBTTagCompound();
+        this.isEmpty = true;
+        this.xcoord = -1;
+        this.ycoord = -1;
+        this.zcoord = -1;
+        this.timestamp = "";
+        this.playerName = "unknown";
     }
 
     private byte[] compressIfNeeded() {
@@ -221,7 +230,6 @@ public class InventoryHolder {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
             CompressedStreamTools.write(wrapper, dos);
-            dos.flush();
             raw = baos.toByteArray();
         } catch (IOException e) {
             return null;
@@ -238,42 +246,38 @@ public class InventoryHolder {
 
     private static byte[] deflate(byte[] input) {
         Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION);
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DeflaterOutputStream dos = new DeflaterOutputStream(baos, deflater);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (DeflaterOutputStream dos = new DeflaterOutputStream(baos, deflater)) {
             dos.write(input);
-            dos.close();
-            return baos.toByteArray();
         } catch (IOException e) {
             return null;
         } finally {
             deflater.end();
         }
+        return baos.toByteArray();
     }
 
     private static NBTTagCompound decompressOrNull(byte[] input) {
         if (input == null || input.length == 0) {
             return null;
         }
-        try {
-            ByteArrayInputStream bais = new ByteArrayInputStream(input);
-            InflaterInputStream iis = new InflaterInputStream(bais);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(input);
+             InflaterInputStream iis = new InflaterInputStream(bais);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[4096];
             int read;
             while ((read = iis.read(buffer)) != -1) {
                 baos.write(buffer, 0, read);
             }
-            iis.close();
-
-            ByteArrayInputStream rawIn = new ByteArrayInputStream(baos.toByteArray());
-            DataInputStream dis = new DataInputStream(rawIn);
-            NBTTagCompound wrapper = CompressedStreamTools.read(dis);
-            if (wrapper == null || !wrapper.hasKey("i")) {
-                return null;
+            try (ByteArrayInputStream rawIn = new ByteArrayInputStream(baos.toByteArray());
+                 DataInputStream dis = new DataInputStream(rawIn)) {
+                NBTTagCompound wrapper = CompressedStreamTools.read(dis);
+                if (wrapper == null || !wrapper.hasKey("i")) {
+                    return null;
+                }
+                NBTBase base = wrapper.getTag("i");
+                return base instanceof NBTTagCompound ? (NBTTagCompound) base : null;
             }
-            net.minecraft.nbt.NBTBase base = wrapper.getTag("i");
-            return base instanceof NBTTagCompound ? (NBTTagCompound) base : null;
         } catch (IOException e) {
             return null;
         }
